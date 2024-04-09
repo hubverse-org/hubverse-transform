@@ -1,0 +1,37 @@
+[project]
+name = 'hubverse-transforms'
+description = 'Utilities for Hubverse data transformations'
+license = {text = 'MIT License'}
+readme = 'README.md'
+requires-python = '>=3.10'
+version = '0.0.1'
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+]
+
+dependencies = [
+    'boto3',
+    'pyarrow',
+]
+
+[project.optional-dependencies]
+dev = [
+    'coverage',
+    'pytest',
+    'pytest-mock'
+]
+
+[build-system]
+# Minimum requirements for the build system to execute.
+requires = ['setuptools', 'wheel']
+
+[tool.ruff]
+line-length = 120
+lint.extend-select = ['I']
+
+[tool.ruff.format]
+quote-style = 'single'
+
+[tools.setuptools]
+packages = ['hubverse_transforms']
