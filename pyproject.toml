@@ -1,10 +1,10 @@
 [project]
-name = 'hubverse-transforms'
-description = 'Utilities for Hubverse data transformations'
-license = {text = 'MIT License'}
-readme = 'README.md'
-requires-python = '>=3.10'
-version = '0.0.1'
+name = "hubverse-transform"
+description = "Utilities for Hubverse model-output transformations"
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+version = "0.1.0"
 classifiers = [
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: MIT License',
@@ -14,17 +14,20 @@ dependencies = [
     'boto3',
     'pyarrow',
 ]
+authors = [
+    {name = "Becky Sweger", email = "rsweger@umass.edu"},
+]
 
 [project.optional-dependencies]
 dev = [
     'coverage',
     'pytest',
-    'pytest-mock'
+    'pytest-mock',
 ]
 
 [build-system]
-# Minimum requirements for the build system to execute.
-requires = ['setuptools', 'wheel']
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 line-length = 120
@@ -33,5 +36,8 @@ lint.extend-select = ['I']
 [tool.ruff.format]
 quote-style = 'single'
 
+
+[tool.pdm]
+distribution = true
 [tools.setuptools]
-packages = ['hubverse_transforms']
+packages = ['hubverse_transform']
