@@ -21,8 +21,10 @@ authors = [
 [project.optional-dependencies]
 dev = [
     'coverage',
+    'mypy',
     'pytest',
     'pytest-mock',
+    'ruff',
 ]
 
 [build-system]
