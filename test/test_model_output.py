@@ -1,14 +1,20 @@
+import csv
 from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from hubverse_transform.model_output import ModelOutputHandler
-from pyarrow import csv, fs
+from pyarrow import csv as pyarrow_csv
+from pyarrow import fs
 
 
 @pytest.fixture()
 def model_output_table() -> pa.Table:
+    """
+    Simple model-output representation to test functions with a PyArrow table input.
+    """
     return pa.table(
         {
             'location': ['earth', 'vulcan', 'seti alpha'],
@@ -18,27 +24,68 @@ def model_output_table() -> pa.Table:
 
 
 @pytest.fixture()
-def test_csv_file(tmpdir, model_output_table) -> str:
-    """Write a temporary csv file and return the URI for use in tests."""
-    test_file_dir = Path(tmpdir.mkdir('raw'))
+def model_output_data() -> list[dict[str, Any]]:
+    """
+    Fixture that returns a list of model-output data representing multiple output types.
+    This fixture is used as input for other fixtures that generate temporary .csv and .parquest files for testing.
+    """
+    model_output_fieldnames = [
+        'reference_date',
+        'location',
+        'horizon',
+        'target',
+        'output_type',
+        'output_type_id',
+        'value',
+    ]
+    model_output_list = [
+        ['2420-01-01', 'US', '1 light year', 'hospitalizations', 'quantile', 0.5, 62],
+        ['2420-01-01', 'US', '1 light year', 'hospitalizations', 'quantile', 0.75, 50.1],
+        ['2420-01-01', '02', 3, 'hospitalizations', 'mean', 'NA', 11],
+        ['2420-01-01', '03', 3, 'hospitalizations', 'mean', 'NA', 'a string value for some reason'],
+        ['2420-01-01', '03', 3, 'hospitalizations', 'mean', None, 33],
+        ['1999-12-31', 'US', 'last month', 'hospitalizations', 'pmf', 'large_increase', 2.597827508665773e-9],
+    ]
+
+    model_output_dict_list = [
+        {field: value for field, value in zip(model_output_fieldnames, row)} for row in model_output_list
+    ]
+
+    return model_output_dict_list
+
+
+@pytest.fixture()
+def test_csv_file(tmpdir, model_output_data) -> str:
+    """
+    Write a temporary csv file and return the URI for use in tests.
+    """
+    test_file_dir = Path(tmpdir.mkdir('raw_csv'))
     test_file_name = '2420-01-01-janeswayaddition-voyager1.csv'
     test_file_path = str(test_file_dir.joinpath(test_file_name))
-    local = fs.LocalFileSystem()
 
-    with local.open_output_stream(test_file_path) as test_csv_file:
-        csv.write_csv(model_output_table, test_csv_file)
+    fieldnames = model_output_data[0].keys()
+
+    with open(test_file_path, 'w', newline='') as test_csv_file:
+        writer = csv.DictWriter(test_csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in model_output_data:
+            writer.writerow(row)
 
     return str(test_file_path)
 
 
 @pytest.fixture()
-def test_parquet_file(tmpdir, model_output_table) -> str:
-    """Write a temporary csv file and return the URI for use in tests."""
-    test_file_dir = Path(tmpdir.mkdir('raw'))
+def test_parquet_file(tmpdir, test_csv_file) -> str:
+    """
+    Write a temporary parquet file and return the URI for use in tests.
+    """
+    test_file_dir = Path(tmpdir.mkdir('raw_parquet'))
     test_file_name = '2420-01-01-janeswayaddition-voyager1.parquet'
     test_file_path = str(test_file_dir.joinpath(test_file_name))
     local = fs.LocalFileSystem()
 
+    # read our test csv so we can write it back out as a parquet file
+    model_output_table = pyarrow_csv.read_csv(test_csv_file)
     with local.open_output_stream(test_file_path) as test_parquet_file:
         pq.write_table(model_output_table, test_parquet_file)
 
@@ -155,12 +202,26 @@ def test_added_column_values(model_output_table):
 
 def test_read_file_csv(test_csv_file, model_output_table):
     mo = ModelOutputHandler(test_csv_file, 'mock:fake-output-uri')
-    assert mo.read_file() == model_output_table
+    pyarrow_table = mo.read_file()
+    assert len(pyarrow_table) == 6
+
+    # output_type_id should retain the value from the .csv file, even when the value is empty or "NA"
+    output_type_id_col = pyarrow_table.column('output_type_id')
+    assert str(output_type_id_col[0]) == '0.5'
+    assert str(output_type_id_col[2]) == 'NA'
+    assert str(output_type_id_col[4]) == ''
 
 
 def test_read_file_parquet(test_parquet_file, model_output_table):
     mo = ModelOutputHandler(test_parquet_file, 'mock:fake-output-uri')
-    assert mo.read_file() == model_output_table
+    pyarrow_table = mo.read_file()
+    assert len(pyarrow_table) == 6
+
+    # output_type_id should retain the value from the .csv file, even when the value is empty or "NA"
+    output_type_id_col = pyarrow_table.column('output_type_id')
+    assert str(output_type_id_col[0]) == '0.5'
+    assert str(output_type_id_col[2]) == 'NA'
+    assert str(output_type_id_col[4]) == ''
 
 
 def test_write_parquet(tmpdir, model_output_table):
