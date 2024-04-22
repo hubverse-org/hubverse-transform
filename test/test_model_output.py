@@ -132,7 +132,7 @@ def test_add_columns(model_output_table):
 
     # transformed data should have 3 new columns: round_id, team, and model
     assert result.num_columns == 5
-    assert set(['round_id', 'team', 'model']).issubset(result.column_names)
+    assert set(['round_id', 'team_abbr', 'model_abbr']).issubset(result.column_names)
 
 
 def test_added_column_values(model_output_table):
@@ -144,13 +144,13 @@ def test_added_column_values(model_output_table):
     # round_id, team, and model columns should each contain a single value
     # that matches round, team, and model as derived from the file name
     assert len(result.column('round_id').unique()) == 1
-    result.column('team').unique()[0].as_py() == '2420-01-01'
+    result.column('team_abbr').unique()[0].as_py() == '2420-01-01'
 
-    assert len(result.column('team').unique()) == 1
-    result.column('team').unique()[0].as_py() == 'janewaysaddiction'
+    assert len(result.column('team_abbr').unique()) == 1
+    result.column('team_abbr').unique()[0].as_py() == 'janewaysaddiction'
 
-    assert len(result.column('model').unique()) == 1
-    result.column('team').unique()[0].as_py() == 'voyager1'
+    assert len(result.column('model_abbr').unique()) == 1
+    result.column('team_abbr').unique()[0].as_py() == 'voyager1'
 
 
 def test_read_file_csv(test_csv_file, model_output_table):

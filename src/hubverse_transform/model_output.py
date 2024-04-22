@@ -120,8 +120,8 @@ class ModelOutputHandler:
         # Create arrays that we'll use to append columns to the table
         new_columns = {
             'round_id': pa.array([self.round_id for i in range(0, num_rows)]),
-            'team': pa.array([self.team for i in range(0, num_rows)]),
-            'model': pa.array([self.model for i in range(0, num_rows)]),
+            'team_abbr': pa.array([self.team for i in range(0, num_rows)]),
+            'model_abbr': pa.array([self.model for i in range(0, num_rows)]),
         }
 
         # Merge the new columns with the existing columns
