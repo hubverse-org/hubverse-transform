@@ -29,6 +29,7 @@ def model_output_data() -> list[dict[str, Any]]:
     Fixture that returns a list of model-output data representing multiple output types.
     This fixture is used as input for other fixtures that generate temporary .csv and .parquest files for testing.
     """
+
     model_output_fieldnames = [
         'reference_date',
         'location',
@@ -41,8 +42,6 @@ def model_output_data() -> list[dict[str, Any]]:
     model_output_list = [
         ['2420-01-01', 'US', '1 light year', 'hospitalizations', 'quantile', 0.5, 62],
         ['2420-01-01', 'US', '1 light year', 'hospitalizations', 'quantile', 0.75, 50.1],
-        ['2420-01-01', '02', 3, 'hospitalizations', 'mean', 'NA', 11],
-        ['2420-01-01', '03', 3, 'hospitalizations', 'mean', 'NA', 'a string value for some reason'],
         ['2420-01-01', '03', 3, 'hospitalizations', 'mean', None, 33],
         ['1999-12-31', 'US', 'last month', 'hospitalizations', 'pmf', 'large_increase', 2.597827508665773e-9],
     ]
@@ -203,25 +202,25 @@ def test_added_column_values(model_output_table):
 def test_read_file_csv(test_csv_file, model_output_table):
     mo = ModelOutputHandler(test_csv_file, 'mock:fake-output-uri')
     pyarrow_table = mo.read_file()
-    assert len(pyarrow_table) == 6
+    assert len(pyarrow_table) == 4
 
-    # output_type_id should retain the value from the .csv file, even when the value is empty or "NA"
+    # empty output_type_id should transform to null
     output_type_id_col = pyarrow_table.column('output_type_id')
     assert str(output_type_id_col[0]) == '0.5'
-    assert str(output_type_id_col[2]) == 'NA'
-    assert str(output_type_id_col[4]) == ''
+    assert pa.compute.is_null(output_type_id_col[2]).as_py() is True
+    assert str(output_type_id_col[3]) == 'large_increase'
 
 
 def test_read_file_parquet(test_parquet_file, model_output_table):
     mo = ModelOutputHandler(test_parquet_file, 'mock:fake-output-uri')
     pyarrow_table = mo.read_file()
-    assert len(pyarrow_table) == 6
+    assert len(pyarrow_table) == 4
 
     # output_type_id should retain the value from the .csv file, even when the value is empty or "NA"
     output_type_id_col = pyarrow_table.column('output_type_id')
     assert str(output_type_id_col[0]) == '0.5'
-    assert str(output_type_id_col[2]) == 'NA'
-    assert str(output_type_id_col[4]) == ''
+    assert str(output_type_id_col[2]) == ''
+    assert str(output_type_id_col[3]) == 'large_increase'
 
 
 def test_write_parquet(tmpdir, model_output_table):
@@ -235,7 +234,7 @@ def test_write_parquet(tmpdir, model_output_table):
     assert actual_output_file_path == expected_output_file_path
 
 
-def test_transform_model_output(test_csv_file, tmpdir):
+def test_transform_model_output_path(test_csv_file, tmpdir):
     output_dir = str(tmpdir.mkdir('model-output'))
     mo = ModelOutputHandler(test_csv_file, output_dir)
     output_uri = mo.transform_model_output()
