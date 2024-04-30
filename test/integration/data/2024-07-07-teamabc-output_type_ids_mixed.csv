@@ -1,0 +1,14 @@
+"origin_date","target","horizon","location","output_type","output_type_id","value"
+2022-10-08,"wk inc flu hosp",1,"02","quantile",0.99,203
+2022-10-08,"wk inc flu hosp",1,"02","mean",,173
+2022-10-08,"wk inc flu hosp",1,"02","mean",NA,173
+2022-10-08,"wk inc flu hosp",1,"02","median","",0.98765
+2022-10-08,"wk inc flu hosp",1,"02","median",null,0.98765
+2022-10-08,"wk inc flu hosp",1,"02","median",Null,0.98765
+2022-10-08,"wk inc flu hosp",1,"02","median"," ",0.1.654
+2023-10-21,wk flu hosp rate change,-1,US,pmf,large,0.0018554857403307722
+2023-10-21,wk flu hosp rate change,-1,US,pmf,"large",0.0018554857403307722
+2023-10-21,wk flu hosp rate change,-1,US,pmf,"large",what if this is a big string with no quotes
+2022-10-08,"wk inc flu hosp",1,"02","mean",na,22.22
+2022-10-08,"wk inc flu hosp",1,"02","mean",nan,12.345
+

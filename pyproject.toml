@@ -1,0 +1,45 @@
+[project]
+name = "hubverse-transform"
+description = "Utilities for Hubverse model-output transformations"
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+version = "0.1.0"
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+]
+
+dependencies = [
+    'boto3',
+    'pyarrow',
+]
+authors = [
+    {name = "Becky Sweger", email = "rsweger@umass.edu"},
+]
+
+[project.optional-dependencies]
+dev = [
+    'coverage',
+    'mypy',
+    'pytest',
+    'pytest-mock',
+    'ruff',
+]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+lint.extend-select = ['I']
+
+[tool.ruff.format]
+quote-style = 'single'
+
+
+[tool.pdm]
+distribution = true
+[tools.setuptools]
+packages = ['hubverse_transform']
