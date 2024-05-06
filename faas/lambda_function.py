@@ -21,7 +21,9 @@ logger.setLevel("INFO")
 def lambda_handler(event, context):
     logger.info("Received event: " + json.dumps(event, indent=2))
 
-    # Get the object from the event and show its content type
+    # info from the S3 event
+    event_source = event["Records"][0]["eventSource"]
+    event_name = event["Records"][0]["eventName"]
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = urllib.parse.unquote_plus(event["Records"][0]["s3"]["object"]["key"], encoding="utf-8")
 
@@ -33,6 +35,12 @@ def lambda_handler(event, context):
     # if not any(ext in key.lower() for ext in extensions):
     #     print(f"{key} is not a supported file type, skipping")
     #     return
+
+    # Until we implement ModelOutputHandler functionality to act on deleted model-output files, ignore any ObjectDelete
+    # events that are triggered by by a hub's S3 bucket.
+    if "objectcreated" not in event_name.lower():
+        logger.info(f"Event type {event_source}:{event_name} is not supported, skipping")
+        return
 
     logger.info("Transforming file: {}/{}".format(bucket, key))
     try:
