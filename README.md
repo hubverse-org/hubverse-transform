@@ -142,3 +142,17 @@ The `pdm add` command will install the package, add it to [`pyproject.toml`](pyp
 
 Refer to [PDM's documentation](https://pdm-project.org/latest/usage/dependency/) for complete information about adding dependencies.
 
+
+## Creating and deploying the AWS Lambda package
+
+**Temporary: next step is to deploy updates to the lambda package via GitHub Actions**
+
+To package the hubverse_transform code for deployment to the `hubverse-transform-model-output` AWS Lambda function:
+
+1. Make sure you have the AWS CLI installed
+2. Make sure PDM is installed (see the dev setup instructions above)
+3. Make sure you have AWS credentials that allow writes to the `hubverse-assets` S3 bucket
+4. From the root of this project, run the deploy script:
+```bash
+source deploy_lambda.sh
+```
