@@ -100,8 +100,22 @@ def test_new_instance():
     assert mo.file_name == "2420-01-01-team_one-model"
     assert mo.file_type == ".csv"
     assert mo.round_id == "2420-01-01"
-    assert mo.team == "team_one"
-    assert mo.model == "model"
+    assert mo.model_id == "team_one-model"
+
+
+@pytest.mark.parametrize(
+    "file_uri, expected_round_id, expected_model_id",
+    [
+        ("mock:raw/prefix/2420-01-01-team-model.csv", "2420-01-01", "team-model"),
+        ("mock:raw/prefix/2420-01-01-----team-model.parquet", "2420-01-01", "team-model"),
+        ("mock:raw/prefix/2420-01-01____teammodelallonestring.csv", "2420-01-01", "teammodelallonestring"),
+        ("mock:raw/prefix/2420-01-01____look-at-all-the-hyphens-.csv", "2420-01-01", "look-at-all-the-hyphens-"),
+    ],
+)
+def test_parse_file(file_uri, expected_round_id, expected_model_id):
+    mo = ModelOutputHandler(file_uri, "mock:/output-uri")
+    assert mo.round_id == expected_round_id
+    assert mo.model_id == expected_model_id
 
 
 @pytest.mark.parametrize(
@@ -152,14 +166,14 @@ def test_from_s3_missing_prefix():
 @pytest.mark.parametrize(
     "file_uri, expected_error",
     [
-        ("mock:raw/prefix1/prefix2/2420-01-01-team-name-voyager1.csv", ValueError),
+        ("mock:raw/prefix1/prefix2/2420-01-01.csv", ValueError),
         ("mock:raw/prefix1/prefix2/round_id-team-model.csv", ValueError),
-        ("mock:raw/prefix1/prefix2/2420-01-01-team-model-name.csv", ValueError),
+        ("mock:raw/prefix1/prefix2/01-02-2440-team-model-name.csv", ValueError),
     ],
 )
 def test_parse_s3_key_invalid_format(file_uri, expected_error):
     # ensure ValueError is raised for invalid model-output file name format
-    with pytest.raises(ValueError):
+    with pytest.raises(expected_error):
         ModelOutputHandler(file_uri, "mock:fake-output-uri")
 
 
@@ -176,9 +190,9 @@ def test_add_columns(model_output_table):
 
     result = mo.add_columns(model_output_table)
 
-    # transformed data should have 3 new columns: round_id, team, and model
-    assert result.num_columns == 5
-    assert set(["round_id", "team_abbr", "model_abbr"]).issubset(result.column_names)
+    # transformed data should have 2 new columns: round_id and model_id
+    assert result.num_columns == 4
+    assert set(["round_id", "model_id"]).issubset(result.column_names)
 
 
 def test_added_column_values(model_output_table):
@@ -187,16 +201,13 @@ def test_added_column_values(model_output_table):
 
     result = mo.add_columns(model_output_table)
 
-    # round_id, team, and model columns should each contain a single value
-    # that matches round, team, and model as derived from the file name
+    # round_id and model_id columns should each contain a single value
+    # that matches round and model as derived from the file name
     assert len(result.column("round_id").unique()) == 1
-    result.column("team_abbr").unique()[0].as_py() == "2420-01-01"
+    assert result.column("round_id").unique()[0].as_py() == "2420-01-01"
 
-    assert len(result.column("team_abbr").unique()) == 1
-    result.column("team_abbr").unique()[0].as_py() == "janewaysaddiction"
-
-    assert len(result.column("model_abbr").unique()) == 1
-    result.column("team_abbr").unique()[0].as_py() == "voyager1"
+    assert len(result.column("model_id").unique()) == 1
+    result.column("model_id").unique()[0].as_py() == "janewaysaddiction-voyager1"
 
 
 def test_read_file_csv(test_csv_file, model_output_table):
