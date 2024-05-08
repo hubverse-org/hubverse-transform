@@ -18,7 +18,7 @@ def test_file_path() -> pathlib.Path:
 def test_missing_model_output_id_numeric(tmpdir, test_file_path):
     """Test behavior of model_output_id columns when there are a mix of numeric and missing output_type_ids."""
     output_dir = str(tmpdir.mkdir("model-output"))
-    file_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
+    file_path = str(test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv"))
     mo = ModelOutputHandler(file_path, output_dir)
     output_uri = mo.transform_model_output()
 
@@ -34,7 +34,7 @@ def test_missing_model_output_id_numeric(tmpdir, test_file_path):
 def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     """Test behavior of model_output_id columns when there are a mix of numeric, string, and missing output_type_ids."""
     output_dir = str(tmpdir.mkdir("model-output"))
-    file_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_mixed.csv")
+    file_path = str(test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_mixed.csv"))
     mo = ModelOutputHandler(file_path, output_dir)
     output_uri = mo.transform_model_output()
 
