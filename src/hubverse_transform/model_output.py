@@ -35,11 +35,10 @@ class ModelOutputHandler:
             raise NotImplementedError(f"Unsupported file type: {path.suffix}")
 
         # Parse model-output file name into individual parts
-        # (round_id, team, model)
+        # (round_id, model_id)
         file_parts = self.parse_file(self.file_name)
         self.round_id = file_parts["round_id"]
-        self.team = file_parts["team"]
-        self.model = file_parts["model"]
+        self.model_id = file_parts["model_id"]
 
     def __repr__(self):
         return f"ModelOutputHandler('{self.fs_input.type_name}', '{self.input_file}', '{self.output_path}')"
@@ -70,23 +69,26 @@ class ModelOutputHandler:
     def parse_file(cls, file_name: str) -> dict:
         """Parse model-output file name into individual parts."""
 
-        # TODO: verify assumptions about format of model-output filenames
-        # Code below assumes [round_id likely yyyy-mm-dd]-[team]-[model] AND
-        # that there are no hyphens in team or model names
-        # https://github.com/orgs/Infectious-Disease-Modeling-Hubs/discussions/10
-        file_name_split = file_name.rsplit("-", 2)
+        # In practice, Hubverse hubs are formatting round_id as dates in YYYY-MM-DD format.
+        # There's an open discussion about whether or not we want to support round_ids in other
+        # formats, but until there's a final decision, this code will assume that each model-output
+        # file begins with a YYYY-MM-DD round_id.
+        # https://github.com/Infectious-Disease-Modeling-Hubs/hubValidations/discussions/13
 
-        if (
-            file_name.count("-") > 4
-            or len(file_name_split) != 3
-            or not re.match(r"^\d{4}-\d{2}-\d{2}$", file_name_split[0])
-        ):
-            raise ValueError(f"File name {file_name} not in expected model-output format: yyyy-mm-dd-team-model.")
+        round_id_match = re.match(r"^\d{4}-\d{2}-\d{2}", file_name)
+        if not round_id_match:
+            raise ValueError(f"Unable to get YYYY-MM-DD round_id from file name {file_name}.")
+        round_id = round_id_match.group(0)
+
+        # model_id is anything that comes after round_id in the filename
+        model_id_split = re.split(rf"{round_id}[-_]*", file_name)
+        if not model_id_split or len(model_id_split) <= 1 or not model_id_split[-1]:
+            raise ValueError(f"Unable to get model_id from file name {file_name}.")
+        model_id = "".join(model_id_split[-1].split())
 
         file_parts = {}
-        file_parts["round_id"] = file_name_split[0]
-        file_parts["team"] = file_name_split[1]
-        file_parts["model"] = file_name_split[2]
+        file_parts["round_id"] = round_id
+        file_parts["model_id"] = model_id
 
         # TODO: why so many logs?
         logger.info(f"Parsed model-output filename: {file_parts}")
@@ -124,8 +126,7 @@ class ModelOutputHandler:
         # Create arrays that we'll use to append columns to the table
         new_columns = {
             "round_id": pa.array([self.round_id for i in range(0, num_rows)]),
-            "team_abbr": pa.array([self.team for i in range(0, num_rows)]),
-            "model_abbr": pa.array([self.model for i in range(0, num_rows)]),
+            "model_id": pa.array([self.model_id for i in range(0, num_rows)]),
         }
 
         # Merge the new columns with the existing columns

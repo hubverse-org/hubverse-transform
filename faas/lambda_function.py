@@ -42,10 +42,10 @@ def lambda_handler(event, context):
         logger.info(f"Event type {event_source}:{event_name} is not supported, skipping")
         return
 
-    logger.info("Transforming file: {}/{}".format(bucket, key))
+    logger.info(f"Transforming file: {bucket}/{key}")
     try:
         mo = ModelOutputHandler.from_s3(bucket, key)
         mo.transform_model_output()
     except Exception as e:
-        logger.exception("Error transforming file: {}/{}".format(key, bucket))
+        logger.exception(f"Error transforming file: {bucket}/{key}")
         raise e

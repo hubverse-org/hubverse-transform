@@ -71,8 +71,7 @@ output_type: string
 output_type_id: double
 value: double
 round_id: string
-team: string
-model: string
+model_id: string
 ----
 reference_date: [[2023-10-14,2023-10-14]]
 location: [["01","01"]]
@@ -83,7 +82,7 @@ output_type: [["quantile","quantile"]]
 output_type_id: [[0.01,0.025]]
 value: [[0,1.5810684371620558]]
 round_id: [["2023-10-14","2023-10-14"]]
-team: [["UMass","UMass"]]
+model_id: [["UMass-flusion","UMass-flusion"]]
 ...
 ```
 
