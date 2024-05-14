@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import re
+from urllib.parse import quote
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -17,11 +18,11 @@ logger.setLevel(logging.INFO)
 
 class ModelOutputHandler:
     def __init__(self, input_uri: str, output_uri: str):
-        input_filesystem = fs.FileSystem.from_uri(input_uri)
+        input_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(input_uri))
         self.fs_input = input_filesystem[0]
         self.input_file = input_filesystem[1]
 
-        output_filesystem = fs.FileSystem.from_uri(output_uri)
+        output_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(output_uri))
         self.fs_output = output_filesystem[0]
         self.output_path = output_filesystem[1]
 
@@ -66,6 +67,22 @@ class ModelOutputHandler:
 
         return cls(s3_input_uri, s3_output_uri)
 
+    def sanitize_uri(self, uri: str, safe=":/") -> str:
+        """Sanitize URIs for use with pyarrow's filesystem."""
+
+        uri_path = pathlib.Path(uri)
+
+        # remove spaces at the end of a filename (e.g., my-model-output .csv) and
+        # also at the beginning and end of the path string
+        clean_path = pathlib.Path(str(uri_path).replace(uri_path.stem, uri_path.stem.strip()))
+        clean_string = str(clean_path).strip()
+
+        # encode the cleaned path (for example, any remaining spaces) so we can
+        # safely use it as a URI
+        clean_uri = quote(str(clean_string), safe=safe)
+
+        return clean_uri
+
     def parse_file(cls, file_name: str) -> dict:
         """Parse model-output file name into individual parts."""
 
@@ -84,13 +101,12 @@ class ModelOutputHandler:
         model_id_split = re.split(rf"{round_id}[-_]*", file_name)
         if not model_id_split or len(model_id_split) <= 1 or not model_id_split[-1]:
             raise ValueError(f"Unable to get model_id from file name {file_name}.")
-        model_id = "".join(model_id_split[-1].split())
+        model_id = model_id_split[-1].strip()
 
         file_parts = {}
         file_parts["round_id"] = round_id
         file_parts["model_id"] = model_id
 
-        # TODO: why so many logs?
         logger.info(f"Parsed model-output filename: {file_parts}")
         return file_parts
 

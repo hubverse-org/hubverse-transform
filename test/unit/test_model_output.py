@@ -9,6 +9,8 @@ from hubverse_transform.model_output import ModelOutputHandler
 from pyarrow import csv as pyarrow_csv
 from pyarrow import fs
 
+# note: the mocker fixture used throughout is provided by pytest-mock
+
 
 @pytest.fixture()
 def model_output_table() -> pa.Table:
@@ -115,6 +117,55 @@ def test_new_instance():
 def test_parse_file(file_uri, expected_round_id, expected_model_id):
     mo = ModelOutputHandler(file_uri, "mock:/output-uri")
     assert mo.round_id == expected_round_id
+    assert mo.model_id == expected_model_id
+
+
+@pytest.mark.parametrize(
+    "input_uri, output_uri, expected_input_file, expected_output_path, expected_file_name, expected_model_id",
+    [
+        (
+            "mock:bucket123/raw/prefix1/prefix 2/2420-01-01-team-model name with spaces.csv",
+            "mock:bucket123/prefix1/prefix 2",
+            "bucket123/raw/prefix1/prefix 2/2420-01-01-team-model name with spaces.csv",
+            "bucket123/prefix1/prefix 2",
+            "2420-01-01-team-model name with spaces",
+            "team-model name with spaces",
+        ),
+        (
+            "mock:bucket1.2.3/raw/prefix1/prefix 2/2420-01-01-team-model.name.csv",
+            "mock:bucket123/prefix1/~prefix 2",
+            "bucket1.2.3/raw/prefix1/prefix 2/2420-01-01-team-model.name.csv",
+            "bucket123/prefix1/~prefix 2",
+            "2420-01-01-team-model.name",
+            "team-model.name",
+        ),
+        (
+            "mock:raw/prefix 1/prefix2/2420-01-01-spáces at end .csv",
+            "mock:prefix 1/prefix2",
+            "raw/prefix 1/prefix2/2420-01-01-spáces at end.csv",
+            "prefix 1/prefix2",
+            "2420-01-01-spáces at end",
+            "spáces at end",
+        ),
+        (
+            "mock:a space/prefix 1/prefix2/2420-01-01 look ma no hyphens.csv",
+            "mock:prefix 1/prefix 🐍",
+            "a space/prefix 1/prefix2/2420-01-01 look ma no hyphens.csv",
+            "prefix 1/prefix 🐍",
+            "2420-01-01 look ma no hyphens",
+            "look ma no hyphens",
+        ),
+    ],
+)
+def test_new_instance_special_characters(
+    input_uri, output_uri, expected_input_file, expected_output_path, expected_file_name, expected_model_id
+):
+    # ensure spaces and other characters in directory, filename, s3 key, etc. are handled correctly
+
+    mo = ModelOutputHandler(input_uri, output_uri)
+    assert mo.input_file == expected_input_file
+    assert mo.output_path == expected_output_path
+    assert mo.file_name == expected_file_name
     assert mo.model_id == expected_model_id
 
 
