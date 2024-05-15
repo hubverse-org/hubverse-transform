@@ -12,6 +12,7 @@ classifiers = [
 
 dependencies = [
     "pyarrow>=16.0.0",
+    "cloudpathlib[s3]>=0.18.1",
 ]
 authors = [
     {name = "Becky Sweger", email = "rsweger@umass.edu"},

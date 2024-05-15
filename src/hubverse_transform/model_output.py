@@ -1,10 +1,10 @@
 import logging
-import pathlib
 import re
 from urllib.parse import quote
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from cloudpathlib import AnyPath
 from pyarrow import csv, fs
 
 # Log to stdout
@@ -27,7 +27,7 @@ class ModelOutputHandler:
         self.output_path = output_filesystem[1]
 
         # get file name and type from input file
-        path = pathlib.Path(self.input_file)
+        path = AnyPath(self.input_file)
         self.file_name = path.stem
         self.file_type = path.suffix
 
@@ -55,7 +55,7 @@ class ModelOutputHandler:
         # data (i.e., as submitted my modelers). This check ensures that the file being
         # transformed has originated from wherever a hub keeps these "raw" (un-altered)
         # model-outputs.
-        path = pathlib.Path(s3_key)
+        path = AnyPath(s3_key)
         if path.parts[0] != origin_prefix:
             raise ValueError(f"Model output path {s3_key} does not begin with {origin_prefix}.")
 
@@ -70,11 +70,11 @@ class ModelOutputHandler:
     def sanitize_uri(self, uri: str, safe=":/") -> str:
         """Sanitize URIs for use with pyarrow's filesystem."""
 
-        uri_path = pathlib.Path(uri)
+        uri_path = AnyPath(uri)
 
         # remove spaces at the end of a filename (e.g., my-model-output .csv) and
         # also at the beginning and end of the path string
-        clean_path = pathlib.Path(str(uri_path).replace(uri_path.stem, uri_path.stem.strip()))
+        clean_path = AnyPath(str(uri_path).replace(uri_path.stem, uri_path.stem.strip()))
         clean_string = str(clean_path).strip()
 
         # encode the cleaned path (for example, any remaining spaces) so we can
