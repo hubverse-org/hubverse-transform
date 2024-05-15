@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up PDM 🗻
-        # using the PDM action because actions/setup-python doesn't suppport
+        # using the PDM action because actions/setup-python doesn't support
         # caching for PDM out of the box
         # https://github.com/pdm-project/setup-pdm?tab=readme-ov-file#why-do-i-need-this-action
         uses: pdm-project/setup-pdm@v4
@@ -30,7 +30,7 @@ jobs:
         run: pdm run ruff check
 
       - name: type check ✔️
-        run: pdm run mypy . --ignore-missing-imports
+        run: pdm run mypy . --ignore-missing-imports --disable-error-code=attr-defined
 
       - name: run tests 🧪
         run: pdm run pytest

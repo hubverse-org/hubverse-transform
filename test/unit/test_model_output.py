@@ -106,6 +106,22 @@ def test_new_instance():
 
 
 @pytest.mark.parametrize(
+    "original_uri, expected_sanitized_uri",
+    [
+        ("s3://hub-bucket/raw/round name/model name.parquet", "s3://hub-bucket/raw/round%20name/model%20name.parquet"),
+        ("mock:hub-bucket/raw/round name/model name.parquet", "mock:hub-bucket/raw/round%20name/model%20name.parquet"),
+        ("/tmp/bucket 1/a local file.csv", "/tmp/bucket%201/a%20local%20file.csv"),
+    ],
+)
+def test_sanitize_uri(original_uri, expected_sanitized_uri):
+    # instantiate a ModelOutputHandler object with uris we don't care about (as a way to
+    # test the sanitize_uri method against various types of URIs supported by the pyarrow filesystem
+    mo = ModelOutputHandler("mock:/input-uri/2024-01-01 file.parquet", "mock:/output-uri")
+
+    assert mo.sanitize_uri(original_uri) == expected_sanitized_uri
+
+
+@pytest.mark.parametrize(
     "file_uri, expected_round_id, expected_model_id",
     [
         ("mock:raw/prefix/2420-01-01-team-model.csv", "2420-01-01", "team-model"),
