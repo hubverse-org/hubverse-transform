@@ -92,55 +92,77 @@ If you'd like to contribute, this section has the setup instructions.
 
 **Prerequisites**
 
-The setup instructions below use [PDM](https://pdm-project.org/) to install Python, manage a Python virtual environment, and manage dependencies. However, PDM is only absolutely necessary for managing dependencies (because the lockfile is in PDM format), so other tools for Python installs and environments will work as well.
+1. Python 3.12
 
-To install PDM: https://pdm-project.org/en/latest/#installation
+    **Note:** There are several options for installing Python on your machine:
+    - [download from python.org](https://www.python.org/downloads/)
+    - [pyenv](https://github.com/pyenv/pyenv?tab=readme-ov-file#getting-pyenv) - handy tool for installing an managing multiple versions of Python on MacOS and Linux
+    - [pyenv-win](https://github.com/pyenv-win/pyenv-win) - a fork of pyenv for Windows
+
+
+2. A way to manage Python virtual environments
+
+    There are many tools for managing Python virtual environments. The setup instructions below use `venv` which comes with Python, but if you prefer another virtual environment management tool, feel free to use it.
 
 **Setup**
 
 Follow the directions below to set this project up on your local machine.
 
-1. Clone this repository and change into the project directory.
-2. Make sure you have a version of Python installed that meets the `requires-python` constraint in [pyproject.toml](pyproject.toml).
+1. Make sure that your current Python interpreter meets the `requires-python` constraint in [pyproject.toml](pyproject.toml).
+2. Clone this repository and change into the project directory (`hubverse-transform`):
+3. Create a Python virtual environment for the project:
+    ```bash
+    python -m venv .venv
+    ```
+4. Activate the virtual environment:
+    ```bash
+    # MacOs/Linux
+    source .venv/bin/activate
 
-    **Note:** if you don't have Python installed, PDM can install it for you: `pdm python install 3.12.2`
-3. Install the project dependencies (this will also create a virtual environment):
+    # Windows
+    .venv\Scripts\activate
+    ```
+5. Install the project dependencies (including installing the project as an editable package):
+    ```bash
+    pip install -e . && pip install -r requirements/requirements-dev.txt
+    ```
+6. Verify that everything is working by running the test suite:
 
     ```bash
-    pdm install
+    pytest
     ```
-4. Verify that everything is working by running the test suite:
-
-    ```bash
-    pdm run pytest
-    ```
-
-To sync project dependencies after pulling upstream code changes:
-
-```bash
-pdm sync
-```
 
 ## Adding Dependencies
 
-This project uses PDM to manage dependencies and add them to a cross-platform lockfile.
+Because we want a robust lockfile to use for reproducible builds, adding dependencies to the project is a multi-step process. Here we use `uv` to resolve and install the project's dependencies. However, `pip-tools` will also work (`uv` is a drop-in replacement for `pip-tools` and is much faster).
 
-To add a new dependency:
+Prerequisites:
+- ['uv'](https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started)
 
-```bash
-pdm add [package-name]
-```
+1. Add the new dependency to [`pyproject.toml`](pyproject.toml) (don't be too prescriptive about versions):
+    - Dependencies required for `hubverse_transform` to run should be added to the `dependencies` section.
+    - Dependencies needed for development (for example, running tests or linting) should be added to the `dev` section of `project.optional-dependencies`.
 
-To add a new dev dependency:
+2. Generate updated requirements files:
 
-```bash
-pdm add --dev [package-name]
-```
+    ```bash
+    uv pip compile pyproject.toml -o requirements/requirements.txt && uv pip compile pyproject.toml --extra dev -o requirements/requirements-dev.txt
+    ```
 
-The `pdm add` command will install the package, add it to [`pyproject.toml`](pyproject.toml), and update [`pdm.lock`](pdm.lock).
+3. Update project dependencies:
 
-Refer to [PDM's documentation](https://pdm-project.org/latest/usage/dependency/) for complete information about adding dependencies.
+    **Note:** This package was originally developed on MacOS. If you have trouble installing the dependencies. `uv pip sync` has a [`--python-platform` flag](https://github.com/astral-sh/uv?tab=readme-ov-file#multi-platform-resolution) that can be used to specify the platform.
 
+    ```bash
+    # note: requirements-dev.txt contains the base requirements AND the dev requirements
+    #
+    # using pip
+    pip install -r requirements/requirements-dev.txt
+    #
+    # alternately, you can use uv to install the dependencies: it is faster and has a
+    # a handy sync option that will cleanup unused dependencieså
+    uv pip sync requirements/requirements-dev.txt
+    ```
 
 ## Creating and deploying the AWS Lambda package
 
@@ -149,9 +171,8 @@ Refer to [PDM's documentation](https://pdm-project.org/latest/usage/dependency/)
 To package the hubverse_transform code for deployment to the `hubverse-transform-model-output` AWS Lambda function:
 
 1. Make sure you have the AWS CLI installed
-2. Make sure PDM is installed (see the dev setup instructions above)
-3. Make sure you have AWS credentials that allow writes to the `hubverse-assets` S3 bucket
-4. From the root of this project, run the deploy script:
+2. Make sure you have AWS credentials that allow writes to the `hubverse-assets` S3 bucket
+3. From the root of this project, run the deploy script:
 ```bash
 source deploy_lambda.sh
 ```
