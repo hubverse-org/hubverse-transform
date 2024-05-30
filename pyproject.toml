@@ -12,7 +12,7 @@ classifiers = [
 
 dependencies = [
     "pyarrow>=16.0.0",
-    "cloudpathlib[s3]>=0.18.1",
+    "cloudpathlib[s3]",
 ]
 authors = [
     {name = "Becky Sweger", email = "rsweger@umass.edu"},
@@ -34,7 +34,5 @@ build-backend = "setuptools.build_meta"
 line-length = 120
 lint.extend-select = ['I']
 
-[tool.pdm]
-distribution = true
 [tools.setuptools]
 packages = ['hubverse_transform']

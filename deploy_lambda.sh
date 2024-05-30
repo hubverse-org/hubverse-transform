@@ -11,9 +11,6 @@ echo "Removing old build artifacts"
 rm -rf $build_dir
 mkdir -p $build_dir/hubverse_transform
 
-# output project requirements
-pdm export --without dev --format requirements > $build_dir/requirements.txt
-
 # install the hubverse_transform dependencies into the build directory
 echo "Installing dependencies into the build directory"
 pip install \
@@ -21,7 +18,7 @@ pip install \
 --target=$build_dir \
 --python-version 3.12 \
 --only-binary=:all: --upgrade \
--r $build_dir/requirements.txt
+-r requirements/requirements.txt
 
 # copy the hubverse_transform package into the build directory so it
 # will be included in the lambda deployment package

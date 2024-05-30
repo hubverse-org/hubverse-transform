@@ -15,24 +15,20 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      - name: Set up PDM 🗻
-        # using the PDM action because actions/setup-python doesn't support
-        # caching for PDM out of the box
-        # https://github.com/pdm-project/setup-pdm?tab=readme-ov-file#why-do-i-need-this-action
-        uses: pdm-project/setup-pdm@v4
+      - name: Set up Python 🐍
+        uses: actions/setup-python@v5
         with:
-          cache: true
+          cache: pip
 
-      - name: Install dependencies 📦
-        run: pdm install
+      - name: Install dependencies 📦️
+        run: |
+          pip install -r requirements/requirements-dev.txt -e .
 
       - name: lint 🧹
-        run: pdm run ruff check
+        run: ruff check
 
       - name: type check ✔️
-        run: pdm run mypy . --ignore-missing-imports --disable-error-code=attr-defined
+        run: mypy . --ignore-missing-imports --disable-error-code=attr-defined
 
       - name: run tests 🧪
-        run: pdm run pytest
-
-
+        run: pytest
