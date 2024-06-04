@@ -26,8 +26,6 @@ class ModelOutputHandler:
         self.fs_output = output_filesystem[0]
         self.output_path = output_filesystem[1]
 
-        self.valid_file = True
-
         # get file name and type from input file
         path = AnyPath(self.input_file)
         self.file_name = path.stem
