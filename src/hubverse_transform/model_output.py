@@ -26,7 +26,7 @@ class ModelOutputHandler:
     file_name : str
         name of the incoming model-output file to be transformed
     file_type : str
-        type of file to be transformed (.parquet or .csv currently supported)
+        type of file to be transformed (.parquet, .pqt, .csv currently supported)
     round_id : str
         name of the round_id associated with the model-output file
     model_id : int
@@ -67,7 +67,7 @@ class ModelOutputHandler:
             self.raise_invalid_file_warning(str(input_path), msg)
 
         # TODO: Add other input file types as needed
-        if self.file_type not in [".csv", ".parquet"]:
+        if self.file_type not in [".csv", ".parquet", ".pqt"]:
             msg = f"Input file type {self.file_type} is not supported"
             self.raise_invalid_file_warning(str(input_path), msg)
 

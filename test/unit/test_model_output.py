@@ -55,8 +55,8 @@ def test_parse_file(tmpdir, s3_bucket_name, mo_path_str, expected_round_id, expe
             "team-model name with spaces",
         ),
         (
-            "raw/prefix1/~prefix 2/2420-01-01-team-model.name.csv",
-            "raw/prefix1/~prefix 2/2420-01-01-team-model.name.csv",
+            "raw/prefix1/~prefix 2/2420-01-01-team-model.name.pqt",
+            "raw/prefix1/~prefix 2/2420-01-01-team-model.name.pqt",
             "prefix1/~prefix 2",
             "2420-01-01-team-model.name",
             "team-model.name",
@@ -125,12 +125,12 @@ def test_from_s3_alternate_origin_prefix(mocker):
 
     mo = ModelOutputHandler.from_s3(
         "hubverse-test",
-        "different-raw-prefix/prefix1/prefix2/2420-01-01-team-model.parquet",
+        "different-raw-prefix/prefix1/prefix2/2420-01-01-team-model.snappy.parquet",
         origin_prefix="different-raw-prefix",
     )
     mo.__init__.assert_called_once_with(
         AnyPath("s3://hubverse-test"),
-        AnyPath("different-raw-prefix/prefix1/prefix2/2420-01-01-team-model.parquet"),
+        AnyPath("different-raw-prefix/prefix1/prefix2/2420-01-01-team-model.snappy.parquet"),
         AnyPath("s3://hubverse-test/prefix1/prefix2"),
     )
 
