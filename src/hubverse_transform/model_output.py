@@ -1,10 +1,11 @@
 import logging
+import os
 import re
 from urllib.parse import quote
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from cloudpathlib import AnyPath
+from cloudpathlib import AnyPath, S3Path
 from pyarrow import csv, fs
 
 # Log to stdout
@@ -17,30 +18,58 @@ logger.setLevel(logging.INFO)
 
 
 class ModelOutputHandler:
-    def __init__(self, input_uri: str, output_uri: str):
-        input_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(input_uri))
+    """
+    A class used to transform a Hubverse model-output file into a standardized format.
+
+    Attributes
+    ----------
+    file_name : str
+        name of the incoming model-output file to be transformed
+    file_type : str
+        type of file to be transformed (.parquet or .csv currently supported)
+    round_id : str
+        name of the round_id associated with the model-output file
+    model_id : int
+        name of the model_id associated with the model-output file
+    """
+
+    def __init__(self, hub_path: os.PathLike, mo_path: os.PathLike, output_path: os.PathLike):
+        """
+        Parameters
+        ----------
+        hub_path : os.PathLike
+            pathlike object that represents a hub's high-level storage location (e.g., S3 bucket name)
+        mo_path : os.PathLike
+            pathlike object that represents the location of a single model-output file, not including the hub_path
+            (e.g., S3 key)
+        output_path : os.PathLike
+            pathlike object that represents where the transformed version of the model-output file will be saved
+        """
+        input_path = hub_path / mo_path  # type: ignore
+        sanitized_input_uri = self.sanitize_uri(input_path)
+        input_filesystem = fs.FileSystem.from_uri(sanitized_input_uri)
         self.fs_input = input_filesystem[0]
         self.input_file = input_filesystem[1]
 
-        output_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(output_uri))
+        output_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(output_path))
         self.fs_output = output_filesystem[0]
         self.output_path = output_filesystem[1]
 
-        # get file name and type from input file
-        path = AnyPath(self.input_file)
-        self.file_name = path.stem
-        self.file_type = path.suffix
+        # get file name and type from input file (use the sanitized version)
+        file_path = AnyPath(self.input_file)
+        self.file_name = file_path.stem  # file name without extension
+        self.file_type = file_path.suffix
 
         # handle case when the function is triggered without a file
         # (e.g., if someone manually creates a folder in an S3 bucket)
-        if not path.suffix:
+        if not input_path.suffix:
             msg = "Input file has no extension"
-            self.raise_invalid_file_warning(str(path), msg)
+            self.raise_invalid_file_warning(str(input_path), msg)
 
         # TODO: Add other input file types as needed
         if self.file_type not in [".csv", ".parquet"]:
             msg = f"Input file type {self.file_type} is not supported"
-            self.raise_invalid_file_warning(str(path), msg)
+            self.raise_invalid_file_warning(str(input_path), msg)
 
         # Parse model-output file name into individual parts
         # (round_id, model_id)
@@ -62,17 +91,17 @@ class ModelOutputHandler:
         # data (i.e., as submitted my modelers). This check ensures that the file being
         # transformed has originated from wherever a hub keeps these "raw" (un-altered)
         # model-outputs.
-        path = AnyPath(s3_key)
-        if path.parts[0] != origin_prefix:
+        s3_mo_path = AnyPath(s3_key)
+        if s3_mo_path.parts[0] != origin_prefix:
             raise ValueError(f"Model output path {s3_key} does not begin with {origin_prefix}.")
 
-        s3_input_uri = f"s3://{bucket_name}/{s3_key}"
+        s3_bucket_path = S3Path(f"s3://{bucket_name}")
 
         # Destination path = origin path w/o the origin prefix
-        destination_path = str(path.relative_to(origin_prefix).parent)
-        s3_output_uri = f"s3://{bucket_name}/{destination_path}"
+        destination_path = str(s3_mo_path.relative_to(origin_prefix).parent)
+        s3_output_path = S3Path(f"s3://{bucket_name}/{destination_path}")
 
-        return cls(s3_input_uri, s3_output_uri)
+        return cls(s3_bucket_path, s3_mo_path, s3_output_path)  # type: ignore
 
     def raise_invalid_file_warning(self, path: str, msg: str) -> None:
         """Raise a warning if the class was instantiated with an invalid file."""
@@ -85,18 +114,15 @@ class ModelOutputHandler:
         )
         raise UserWarning(msg)
 
-    def sanitize_uri(self, uri: str, safe=":/") -> str:
+    def sanitize_uri(self, path: os.PathLike, safe=":/") -> str:
         """Sanitize URIs for use with pyarrow's filesystem."""
-
-        uri_path = AnyPath(uri)
 
         # remove spaces at the end of a filename (e.g., my-model-output .csv) and
         # also at the beginning and end of the path string
-        clean_path = AnyPath(str(uri_path).replace(uri_path.stem, uri_path.stem.strip()))
+        clean_path = AnyPath(str(path).replace(path.stem, path.stem.strip()))  # type: ignore
         clean_string = str(clean_path).strip()
 
-        # encode the cleaned path (for example, any remaining spaces) so we can
-        # safely use it as a URI
+        # encode the cleaned path (for example, any remaining spaces) so we can safely use it
         clean_uri = quote(str(clean_string), safe=safe)
 
         return clean_uri
