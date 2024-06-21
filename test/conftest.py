@@ -48,7 +48,7 @@ def model_output_table() -> pa.Table:
 def model_output_data() -> list[dict[str, Any]]:
     """
     Fixture that returns a list of model-output data representing multiple output types.
-    This fixture is used as input for other fixtures that generate temporary .csv and .parquest files for testing.
+    This fixture is used as input for other fixtures that generate temporary .csv and .parquet files for testing.
     """
 
     model_output_fieldnames = [

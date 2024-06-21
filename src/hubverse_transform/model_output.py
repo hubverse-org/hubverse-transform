@@ -19,18 +19,19 @@ logger.setLevel(logging.INFO)
 
 class ModelOutputHandler:
     """
-    A class used to transform a Hubverse model-output file into a standardized format.
+    Transforms a Hubverse model-output file to a standard format.
 
     Attributes
     ----------
     file_name : str
-        name of the incoming model-output file to be transformed
+        Name of the incoming model-output file to be transformed.
     file_type : str
-        type of file to be transformed (.parquet, .pqt, .csv currently supported)
+        Type of file to be transformed
+        (.parquet, .pqt, .csv currently supported).
     round_id : str
-        name of the round_id associated with the model-output file
+        Name of the round_id associated with the model-output file.
     model_id : int
-        name of the model_id associated with the model-output file
+        Name of the model_id associated with the model-output file.
     """
 
     def __init__(self, hub_path: os.PathLike, mo_path: os.PathLike, output_path: os.PathLike):
@@ -38,13 +39,15 @@ class ModelOutputHandler:
         Parameters
         ----------
         hub_path : os.PathLike
-            pathlike object that represents a hub's high-level storage location (e.g., S3 bucket name)
+            The location of a Hubverse hub
+            (e.g., S3 bucket name, local filepath).
         mo_path : os.PathLike
-            pathlike object that represents the location of a single model-output file, not including the hub_path
-            (e.g., S3 key)
+            The location of a single model-output file, excluding
+            the hub_path (e.g., S3 key)
         output_path : os.PathLike
-            pathlike object that represents where the transformed version of the model-output file will be saved
+            Where the transformed model-output file will be saved.
         """
+
         input_path = hub_path / mo_path  # type: ignore
         sanitized_input_uri = self.sanitize_uri(input_path)
         input_filesystem = fs.FileSystem.from_uri(sanitized_input_uri)
@@ -85,7 +88,41 @@ class ModelOutputHandler:
 
     @classmethod
     def from_s3(cls, bucket_name: str, s3_key: str, origin_prefix: str = "raw") -> "ModelOutputHandler":
-        """Instantiate ModelOutputHandler for file on AWS S3."""
+        """
+        Factory method to create ModelOutputHandler for S3-based files.
+
+        Use this method to instantiate a ModelOutputHandler object for
+        model-output files store in an S3 bucket (for example, when
+        transformations are invoked via an AWS lambda function).
+
+        Parameters
+        ----------
+        bucket_name : str
+            The S3 bucket that contains the model-output file.
+        s3_key : str
+            The S3 object key of the model-output file.
+        origin_prefix : str, default="raw"
+            The S3 prefix used to store a hub's original,
+            pre-transformed data. Must be the first part of the s3_key.
+
+        Returns
+        -------
+        ModelOutputHandler
+            A new instance of ModelOutputHandler.
+
+        Raises
+        ------
+        ValueError
+            If the s3_key does not begin with the origin_prefix.
+
+        Examples
+        --------
+        >>> mo_handler = ModelOutputHandler.from_s3(
+            "my-bucket",
+            "original_files/2022-01-01_model_output.csv",
+            "original_files"
+            )
+        """
 
         # ModelOutputHandler is designed to operate on original versions of model-output
         # data (i.e., as submitted my modelers). This check ensures that the file being

@@ -80,7 +80,7 @@ def test_parse_file(tmpdir, s3_bucket_name, mo_path_str, expected_round_id, expe
 def test_from_s3_special_characters(
     s3_bucket_name, mo_path_str, expected_input_file, expected_output_path, expected_file_name, expected_model_id
 ):
-    """Test special characters when instaniating ModelOutputHandler via from_s3"""
+    """Test special characters when instantiating ModelOutputHandler via from_s3"""
     # ensure spaces and other characters in directory, filename, s3 key, etc. are handled correctly
     mo = ModelOutputHandler.from_s3(s3_bucket_name, mo_path_str)
     assert mo.input_file == f"{s3_bucket_name}/{expected_input_file}"
