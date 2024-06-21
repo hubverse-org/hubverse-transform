@@ -1,3 +1,5 @@
+# mypy: disable-error-code="operator"
+
 import json
 import os
 
