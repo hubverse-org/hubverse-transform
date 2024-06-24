@@ -1,7 +1,8 @@
-# mypy: disable-error-code="operator"
+# mypy: disable-error-code="operator, arg-type"
 
 import json
 import os
+from datetime import date
 
 from cloudpathlib import AnyPath
 
@@ -65,3 +66,16 @@ class HubConfig:
 
         with tasks_path.open() as f:
             return json.loads(f.read())
+
+    def _get_data_type(self, value: int | bool | str | date | float) -> type:
+        """Return the data type of a value."""
+        data_type = type(value)
+
+        if data_type == str:
+            try:
+                date.fromisoformat(value)
+                data_type = date
+            except ValueError:
+                pass
+
+        return data_type

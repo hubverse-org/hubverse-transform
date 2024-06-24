@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 import pytest
 from cloudpathlib import AnyPath
@@ -128,3 +129,20 @@ def test_hub_missing_tasks_config(hubverse_hub):
     with pytest.raises(FileNotFoundError):
         hc = HubConfig(hub_path, tasks_file="missing-tasks.json")
         print(hc)
+
+
+@pytest.mark.parametrize(
+    "value, expected_type",
+    [
+        ("a string", str),
+        (123, int),
+        (123.45, float),
+        ("2024-07-13", date),
+        (False, bool),
+    ],
+)
+def test_get_data_type(hubverse_hub, value, expected_type):
+    hub_path = AnyPath(hubverse_hub)
+    hc = HubConfig(hub_path)
+
+    assert hc._get_data_type(value) == expected_type
