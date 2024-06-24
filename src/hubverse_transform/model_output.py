@@ -1,3 +1,5 @@
+# mypy: disable-error-code="operator"
+
 import logging
 import os
 import re
@@ -48,7 +50,7 @@ class ModelOutputHandler:
             Where the transformed model-output file will be saved.
         """
 
-        input_path = hub_path / mo_path  # type: ignore
+        input_path = hub_path / mo_path
         sanitized_input_uri = self.sanitize_uri(input_path)
         input_filesystem = fs.FileSystem.from_uri(sanitized_input_uri)
         self.fs_input = input_filesystem[0]
