@@ -1,5 +1,6 @@
 # mypy: disable-error-code="operator, arg-type"
 
+import itertools
 import json
 import os
 from datetime import date
@@ -47,6 +48,47 @@ class HubConfig:
     def __str__(self):
         return f"Hubverse config information for {self.hub_name}."
 
+    def get_task_id_values(self, round_name: str = "all") -> dict[str, set]:
+        """
+        Return a dict of hub task ids and values for a specific round.
+
+        Parameters
+        ----------
+        round_name : str, default="all"
+            Which round's tasks to include. If "all", return tasks
+            and values for all rounds.
+
+        Returns
+        -------
+        model_tasks : dict[str, list]
+            A mapping of tasks ids to their possible values, as
+            defined in a hub's tasks.json configuration file.
+
+        Raises
+        ------
+        ValueError
+            If the tasks configuration file doesn't contain the
+            specified round_name.
+        """
+
+        tasks = self.tasks
+        rounds = tasks.get("rounds", [])
+        if round_name != "all":
+            rounds = [r for r in rounds if r.get("round_name") == round_name]
+
+        if len(rounds) == 0:
+            raise ValueError(f"Round {round_name} not found in tasks configuration")
+
+        model_tasks_dict: dict[str, set] = dict()
+
+        for r in rounds:
+            for task in r.get("model_tasks", []):
+                task_values = self._get_task_id_values(task)
+                for key, value in task_values.items():
+                    model_tasks_dict[key] = model_tasks_dict.get(key, set()) | value
+
+        return model_tasks_dict
+
     def _get_admin_config(self, admin_file: str):
         """Read a Hubverse hub's admin configuration file."""
         admin_path = self.hub_config_path / admin_file
@@ -66,6 +108,21 @@ class HubConfig:
 
         with tasks_path.open() as f:
             return json.loads(f.read())
+
+    def _get_task_id_values(self, task: dict) -> dict[str, set]:
+        """Return a dict of ids and values for a specific modeling task."""
+        task_id_values = dict()
+
+        # create a dictionary of all tasks ids and values for this task
+        task_ids = {task_id[0]: task_id[1] for task_id in task.get("task_ids", {}).items()}
+
+        # flatten the dictionary values for each task_id (i.e., combine "required" and "optional" lists)
+        for task_id in task_ids.items():
+            task_id_values[task_id[0]] = set(
+                itertools.chain.from_iterable([value or [] for value in task_id[1].values()])
+            )
+
+        return task_id_values
 
     def _get_data_type(self, value: int | bool | str | date | float) -> type:
         """Return the data type of a value."""
