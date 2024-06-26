@@ -171,7 +171,7 @@ class ModelOutputHandler:
         # There's an open discussion about whether or not we want to support round_ids in other
         # formats, but until there's a final decision, this code will assume that each model-output
         # file begins with a YYYY-MM-DD round_id.
-        # https://github.com/Infectious-Disease-Modeling-Hubs/hubValidations/discussions/13
+        # https://github.com/hubverse-org/hubValidations/discussions/13
 
         round_id_match = re.match(r"^\d{4}-\d{2}-\d{2}", file_name)
         if not round_id_match:
