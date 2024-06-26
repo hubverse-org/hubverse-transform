@@ -82,8 +82,8 @@ class HubConfig:
         model_tasks_dict: dict[str, set] = dict()
 
         for r in rounds:
-            for task in r.get("model_tasks", []):
-                task_values = self._get_task_id_values(task)
+            for task_set in r.get("model_tasks", []):
+                task_values = self._get_task_id_values(task_set)
                 for key, value in task_values.items():
                     model_tasks_dict[key] = model_tasks_dict.get(key, set()) | value
 
@@ -109,12 +109,12 @@ class HubConfig:
         with tasks_path.open() as f:
             return json.loads(f.read())
 
-    def _get_task_id_values(self, task: dict) -> dict[str, set]:
+    def _get_task_id_values(self, task_set: dict) -> dict[str, set]:
         """Return a dict of ids and values for a specific modeling task."""
         task_id_values = dict()
 
         # create a dictionary of all tasks ids and values for this task
-        task_ids = {task_id[0]: task_id[1] for task_id in task.get("task_ids", {}).items()}
+        task_ids = {task_id[0]: task_id[1] for task_id in task_set.get("task_ids", {}).items()}
 
         # flatten the dictionary values for each task_id (i.e., combine "required" and "optional" lists)
         for task_id in task_ids.items():
