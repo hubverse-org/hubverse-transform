@@ -178,10 +178,7 @@ def test_get_task_id_values_missing_round(hubverse_hub):
     hc = HubConfig(hub_path)
 
     with pytest.raises(ValueError):
-        hc.get_task_id_values("missing round") == {
-            "target": {"starfleet entrance exam score"},
-            "age": {10, 20, 30, 40, 50},
-        }
+        hc.get_task_id_values("missing round")
 
 
 @pytest.mark.parametrize(
