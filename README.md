@@ -10,7 +10,7 @@ Currently, its primary purpose is for use as an AWS Lambda function that transfo
 To install this package:
 
 ```bash
-pip install git+https://github.com/Infectious-Disease-Modeling-Hubs/hubverse-transform.git
+pip install git+https://github.com/hubverse-org/hubverse-transform.git
 ```
 
 Sample usage:
