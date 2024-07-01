@@ -149,7 +149,7 @@ def test_hub_missing_tasks_config(hubverse_hub):
         print(hc)
 
 
-def test_get_task_id_values_all_rounds(hubverse_hub):
+def test_get_task_id_values(hubverse_hub):
     hub_path = AnyPath(hubverse_hub)
     hc = HubConfig(hub_path)
 
@@ -161,24 +161,6 @@ def test_get_task_id_values_all_rounds(hubverse_hub):
         "target_end_date": {"2024-07-20", "2024-07-27", "1999-12-31", "2024-08-20"},
         "age": {10, 20, 30, 40, 50},
     }
-
-
-def test_get_task_id_values_single_round(hubverse_hub):
-    hub_path = AnyPath(hubverse_hub)
-    hc = HubConfig(hub_path)
-
-    assert hc.get_task_id_values("Round 2") == {
-        "target": {"starfleet entrance exam score"},
-        "age": {10, 20, 30, 40, 50},
-    }
-
-
-def test_get_task_id_values_missing_round(hubverse_hub):
-    hub_path = AnyPath(hubverse_hub)
-    hc = HubConfig(hub_path)
-
-    with pytest.raises(ValueError):
-        hc.get_task_id_values("missing round")
 
 
 @pytest.mark.parametrize(

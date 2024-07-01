@@ -48,36 +48,19 @@ class HubConfig:
     def __str__(self):
         return f"Hubverse config information for {self.hub_name}."
 
-    def get_task_id_values(self, round_name: str = "all") -> dict[str, set]:
+    def get_task_id_values(self) -> dict[str, set]:
         """
         Return a dict of hub task ids and values for a specific round.
-
-        Parameters
-        ----------
-        round_name : str, default="all"
-            Which round's tasks to include. If "all", return tasks
-            and values for all rounds.
 
         Returns
         -------
         model_tasks : dict[str, list]
             A mapping of tasks ids to their possible values, as
             defined in a hub's tasks.json configuration file.
-
-        Raises
-        ------
-        ValueError
-            If the tasks configuration file doesn't contain the
-            specified round_name.
         """
 
         tasks = self.tasks
         rounds = tasks.get("rounds", [])
-        if round_name != "all":
-            rounds = [r for r in rounds if r.get("round_name") == round_name]
-
-        if len(rounds) == 0:
-            raise ValueError(f"Round {round_name} not found in tasks configuration")
 
         model_tasks_dict: dict[str, set] = dict()
 
