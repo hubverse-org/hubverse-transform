@@ -50,7 +50,7 @@ class HubConfig:
 
     def get_task_id_values(self) -> dict[str, set]:
         """
-        Return a dict of hub task ids and values for a specific round.
+        Return a dict of hub task ids and required and optional values across all rounds.
 
         Returns
         -------
