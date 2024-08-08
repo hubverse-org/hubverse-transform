@@ -8,6 +8,7 @@ import pyarrow.parquet as pq
 from cloudpathlib import AnyPath, S3Path
 from pyarrow import csv, fs
 
+
 # Log to stdout
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
@@ -33,6 +34,7 @@ class ModelOutputHandler:
     model_id : int
         Name of the model_id associated with the model-output file.
     """
+
 
     def __init__(self, hub_path: os.PathLike, mo_path: os.PathLike, output_path: os.PathLike):
         """
@@ -80,11 +82,14 @@ class ModelOutputHandler:
         self.round_id = file_parts["round_id"]
         self.model_id = file_parts["model_id"]
 
+
     def __repr__(self):
         return f"ModelOutputHandler('{self.fs_input.type_name}', '{self.input_file}', '{self.output_path}')"
 
+
     def __str__(self):
         return f"Handle model-output data transforms for {self.input_file}."
+
 
     @classmethod
     def from_s3(cls, bucket_name: str, s3_key: str, origin_prefix: str = "raw") -> "ModelOutputHandler":
@@ -140,6 +145,7 @@ class ModelOutputHandler:
 
         return cls(s3_bucket_path, s3_mo_path, s3_output_path)  # type: ignore
 
+
     def raise_invalid_file_warning(self, path: str, msg: str) -> None:
         """Raise a warning if the class was instantiated with an invalid file."""
 
@@ -150,6 +156,7 @@ class ModelOutputHandler:
             }
         )
         raise UserWarning(msg)
+
 
     def sanitize_uri(self, path: os.PathLike, safe=":/") -> str:
         """Sanitize URIs for use with pyarrow's filesystem."""
@@ -163,6 +170,7 @@ class ModelOutputHandler:
         clean_uri = quote(str(clean_string), safe=safe)
 
         return clean_uri
+
 
     def parse_file(cls, file_name: str) -> dict:
         """Parse model-output file name into individual parts."""
@@ -191,6 +199,7 @@ class ModelOutputHandler:
         logger.info(f"Parsed model-output filename: {file_parts}")
         return file_parts
 
+
     def read_file(self) -> pa.table:
         """Read model-output file into PyArrow table."""
 
@@ -209,7 +218,17 @@ class ModelOutputHandler:
             model_output_file = self.fs_input.open_input_file(self.input_file)
             model_output_table = pq.read_table(model_output_file)
 
+        # temporarily correct two known field types to string
+        for field_name in ['location', 'output_type_id']:
+            field_idx = model_output_table.schema.get_field_index(field_name)  # -1 if not found
+            if field_idx != -1:
+                print('yy', field_name, field_idx)
+                model_output_table.schema.set(field_idx, pa.field(field_name, pa.string()))
+        model_output_table = model_output_table.cast(model_output_table.schema)
+
+        print('xx 1', model_output_table.schema.field('location').type)
         return model_output_table
+
 
     def add_columns(self, model_output_table: pa.table) -> pa.table:
         """Add model-output metadata columns to PyArrow table."""
@@ -232,6 +251,7 @@ class ModelOutputHandler:
 
         return updated_model_output_table
 
+
     def write_parquet(self, updated_model_output_table: pa.table) -> str:
         """Write transformed model-output table to parquet file."""
 
@@ -243,6 +263,7 @@ class ModelOutputHandler:
         logger.info(f"Finished writing parquet file: {transformed_file_path}")
 
         return transformed_file_path
+
 
     def transform_model_output(self) -> str:
         """Transform model-output data and write to parquet file."""
