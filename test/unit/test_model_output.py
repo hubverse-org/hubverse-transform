@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from pyarrow import fs
-from pyarrow import csv as pyarrow_csv
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from cloudpathlib import AnyPath
 from hubverse_transform.model_output import ModelOutputHandler
+from pyarrow import csv as pyarrow_csv
+from pyarrow import fs
 
 # the mocker fixture used throughout is provided by pytest-mock
 # see conftest.py for definition of other fixtures (e.g., s3_bucket_name)
@@ -262,9 +262,11 @@ def test_invalid_file_warning(tmpdir, file_uri):
     with pytest.raises(UserWarning):
         ModelOutputHandler(hub_path, mo_path, hub_path)
 
+
 #
 # test_location_or_output_type_id_column_schema_csv() and fixtures
 #
+
 
 @pytest.fixture()
 def test_file_path() -> Path:
@@ -282,14 +284,14 @@ def test_location_or_output_type_id_column_schema_csv(tmpdir, test_file_path):
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
     mo = ModelOutputHandler(hub_path, mo_path, hub_path)
     pyarrow_table = mo.read_file()
-    assert pa.types.is_string(pyarrow_table.schema.field('location').type)
-    assert pa.types.is_string(pyarrow_table.schema.field('output_type_id').type)
+    assert pa.types.is_string(pyarrow_table.schema.field("location").type)
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
 
     # case 2: no location just output_type_id with numeric value types
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.csv")
     mo = ModelOutputHandler(hub_path, mo_path, hub_path)
     pyarrow_table = mo.read_file()
-    assert pa.types.is_string(pyarrow_table.schema.field('output_type_id').type)
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
 
 
 def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path):
@@ -305,11 +307,17 @@ def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path
 
     mo = ModelOutputHandler(hub_path, parquet_file, hub_path)
     pyarrow_table = mo.read_file()
-    print('xx 2', pyarrow_table.schema.field('location').type)
-    assert pa.types.is_string(pyarrow_table.schema.field('location').type)
-    assert pa.types.is_string(pyarrow_table.schema.field('output_type_id').type)
-    assert pyarrow_table.column_names == ["origin_date", "target", "horizon", "location", "output_type",
-                                          "output_type_id", "value"]
+    assert pa.types.is_string(pyarrow_table.schema.field("location").type)
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
+    assert pyarrow_table.column_names == [
+        "origin_date",
+        "target",
+        "horizon",
+        "location",
+        "output_type",
+        "output_type_id",
+        "value",
+    ]
 
     # case 2: no location just output_type_id with numeric value types
     mo_csv_file = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.csv")
@@ -321,5 +329,5 @@ def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path
 
     mo = ModelOutputHandler(hub_path, parquet_file, hub_path)
     pyarrow_table = mo.read_file()
-    assert pa.types.is_string(pyarrow_table.schema.field('output_type_id').type)
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
     assert pyarrow_table.column_names == ["origin_date", "target", "horizon", "output_type", "output_type_id", "value"]
