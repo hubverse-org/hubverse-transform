@@ -331,3 +331,6 @@ def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path
     pyarrow_table = mo.read_file()
     assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
     assert pyarrow_table.column_names == ["origin_date", "target", "horizon", "output_type", "output_type_id", "value"]
+    assert len(pyarrow_table.filter(pa.compute.field("output_type_id") == "0.99"))
+    with pytest.raises(Exception):
+        pyarrow_table.filter(pa.compute.field("output_type_id") == 0.99)
