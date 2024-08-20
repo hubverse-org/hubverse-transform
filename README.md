@@ -176,3 +176,15 @@ To package the hubverse_transform code for deployment to the `hubverse-transform
 ```bash
 source deploy_lambda.sh
 ```
+
+### Re-processing model-output files that have already been transformed
+
+If you need to re-run the hubverse-transform function on model-output files that have already been uploaded to S3,
+you can use the `lambda_retrigger_model_output_add.py` script in this repo's `faas/` folder.
+
+This manual action should be done with care but can be handy if data needs to be re-processed (in the event of a
+hubverse-transform bug fix, for example). The script works by updating the S3 metadata for every file in the
+`raw/model-output` file of the hub's S3 bucket. The metadata update then triggers the lambda function that runs
+when new incoming model-output files are detected.
+
+**Note:** You will need write access to the hub's S3 bucket to use this script.
