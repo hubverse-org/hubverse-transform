@@ -1,12 +1,9 @@
 from pathlib import Path
 
 import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
 from cloudpathlib import AnyPath
 from hubverse_transform.model_output import ModelOutputHandler
-from pyarrow import csv as pyarrow_csv
-from pyarrow import fs
 
 # the mocker fixture used throughout is provided by pytest-mock
 # see conftest.py for definition of other fixtures (e.g., s3_bucket_name)
@@ -280,36 +277,7 @@ def test_file_path() -> Path:
 def test_location_or_output_type_id_column_schema_csv(tmpdir, test_file_path):
     hub_path = AnyPath(tmpdir)
 
-    # case 1: location and output_type_id with numeric value types
-    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
-    mo = ModelOutputHandler(hub_path, mo_path, hub_path)
-    pyarrow_table = mo.read_file()
-    assert pa.types.is_string(pyarrow_table.schema.field("location").type)
-    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
-
-    # case 2: no location just output_type_id with numeric value types
-    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.csv")
-    mo = ModelOutputHandler(hub_path, mo_path, hub_path)
-    pyarrow_table = mo.read_file()
-    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
-
-
-def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path):
-    hub_path = AnyPath(tmpdir)
-
-    # case 1: location and output_type_id with numeric value types
-    mo_csv_file = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
-    parquet_file = tmpdir / "2024-07-07-teamabc-output_type_ids_numeric.parquet"
-    mo_csv_table = pyarrow_csv.read_csv(mo_csv_file)
-    local = fs.LocalFileSystem()
-    with local.open_output_stream(str(parquet_file)) as parquet_file_stream:
-        pq.write_table(mo_csv_table, parquet_file_stream)
-
-    mo = ModelOutputHandler(hub_path, parquet_file, hub_path)
-    pyarrow_table = mo.read_file()
-    assert pa.types.is_string(pyarrow_table.schema.field("location").type)
-    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
-    assert pyarrow_table.column_names == [
+    expected_column_names = [
         "origin_date",
         "target",
         "horizon",
@@ -318,19 +286,63 @@ def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path
         "output_type_id",
         "value",
     ]
+    expected_location_values = [None, "02", "02", None, "string location", "27"]
+    expected_output_type_id_values = ["0.99", None, None, "0.0", None, "111"]
+
+    # case 1: location and output_type_id with numeric value types
+    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
+    mo = ModelOutputHandler(hub_path, mo_path, hub_path)
+    pyarrow_table = mo.read_file()
+    assert len(pyarrow_table) == 6
+    assert pyarrow_table.column_names == expected_column_names
+    assert pa.types.is_string(pyarrow_table.schema.field("location").type)
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
+    assert pyarrow_table["location"].to_pylist() == expected_location_values
+    assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values
 
     # case 2: no location just output_type_id with numeric value types
-    mo_csv_file = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.csv")
-    parquet_file = tmpdir / "2024-07-07-teamabc-output_type_ids_numeric.parquet"
-    mo_csv_table = pyarrow_csv.read_csv(mo_csv_file)
-    local = fs.LocalFileSystem()
-    with local.open_output_stream(str(parquet_file)) as parquet_file_stream:
-        pq.write_table(mo_csv_table, parquet_file_stream)
-
-    mo = ModelOutputHandler(hub_path, parquet_file, hub_path)
+    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.csv")
+    mo = ModelOutputHandler(hub_path, mo_path, hub_path)
     pyarrow_table = mo.read_file()
+    assert len(pyarrow_table) == 6
+    expected_column_names.remove("location")
+    assert pyarrow_table.column_names == expected_column_names
     assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
-    assert pyarrow_table.column_names == ["origin_date", "target", "horizon", "output_type", "output_type_id", "value"]
-    assert len(pyarrow_table.filter(pa.compute.field("output_type_id") == "0.99"))
-    with pytest.raises(Exception):
-        pyarrow_table.filter(pa.compute.field("output_type_id") == 0.99)
+    assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values
+
+
+def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path):
+    hub_path = AnyPath(tmpdir)
+
+    expected_column_names = [
+        "origin_date",
+        "target",
+        "horizon",
+        "location",
+        "output_type",
+        "output_type_id",
+        "value",
+    ]
+    expected_location_values = [None, "02", "02", None, "string location", "27"]
+    expected_output_type_id_values = ["0.99", None, None, "0", None, "111"]
+
+    # case 1: location and output_type_id with numeric value types
+    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.parquet")
+    mo = ModelOutputHandler(hub_path, mo_path, hub_path)
+    pyarrow_table = mo.read_file()
+    assert len(pyarrow_table) == 6
+    assert pyarrow_table.column_names == expected_column_names
+    assert pa.types.is_string(pyarrow_table.schema.field("location").type)
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
+    assert pyarrow_table["location"].to_pylist() == expected_location_values
+    assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values
+
+    # case 2: no location just output_type_id with numeric value types
+    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.parquet")
+    mo = ModelOutputHandler(hub_path, mo_path, hub_path)
+    pyarrow_table = mo.read_file()
+    assert len(pyarrow_table) == 6
+    expected_column_names.remove("location")
+    assert pyarrow_table.column_names == expected_column_names
+    assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
+    assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values

@@ -71,15 +71,9 @@ def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     assert len(null_output_type_rows) == 8
 
 
-@pytest.mark.parametrize(
-    "mo_path",
-    [
-        "2024-05-04-teamabc-locations_numeric.parquet",
-        "2024-05-04-teamabc-locations_numeric.csv",
-    ],
-)
-def test_model_output_parquet_schema(tmpdir, test_file_path, mo_path, expected_model_output_schema):
+def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_schema):
     """Test the parquet schema on files written by ModelOutputHandler."""
+    mo_path = "2024-05-04-teamabc-locations_numeric.csv"
     mo_full_path = test_file_path.joinpath(mo_path)
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_full_path, output_path)
@@ -91,3 +85,37 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, mo_path, expected_m
     # read the output parquet file
     transformed_output = parquet.read_table(output_uri)
     assert len(transformed_output) == 23
+
+    # location is transformed to string
+    assert set(transformed_output["location"].to_pylist()) == {"02"}
+
+    # output_type_id transformed to string
+    assert transformed_output["output_type_id"].to_pylist()[0] == "0.01"
+
+
+def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_output_schema):
+    """Test the parquet schema on files written by ModelOutputHandler."""
+    mo_path = "2024-05-04-teamabc-locations_numeric.parquet"
+    mo_full_path = test_file_path.joinpath(mo_path)
+    output_path = pathlib.Path(tmpdir.mkdir("model-output"))
+    mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_full_path, output_path)
+    output_uri = mo.transform_model_output()
+
+    # check schema of the original model_output parquet files so we can verify that
+    # model_output_id and location are correctly transformed to string
+    original_schema = pq.read_metadata(mo_full_path).schema.to_arrow_schema()
+    pa.types.is_float64(original_schema.field("output_type_id").type)
+    pa.types.is_int64(original_schema.field("location").type)
+
+    actual_schema = pq.read_metadata(output_uri).schema.to_arrow_schema()
+    assert expected_model_output_schema.equals(actual_schema)
+
+    # read the output parquet file
+    transformed_output = parquet.read_table(output_uri)
+    assert len(transformed_output) == 23
+
+    # location is transformed to string (no leading zeroes because original parquet column is int)
+    assert set(transformed_output["location"].to_pylist()) == {"2"}
+
+    # output_type_id transformed to string (leading zeroes retained because original parquet column is float)
+    assert transformed_output["output_type_id"].to_pylist()[0] == "0.01"
