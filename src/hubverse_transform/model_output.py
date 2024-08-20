@@ -117,7 +117,7 @@ class ModelOutputHandler:
 
         Examples
         --------
-        >>> mo_handler = ModelOutputHandler.from_s3(
+        mo_handler = ModelOutputHandler.from_s3(
             "my-bucket",
             "original_files/2022-01-01_model_output.csv",
             "original_files"
@@ -200,14 +200,21 @@ class ModelOutputHandler:
             model_output_file = self.fs_input.open_input_stream(self.input_file)
             # normalize incoming missing data values to null, regardless of data type
             options = csv.ConvertOptions(
-                null_values=["na", "NA", "", " ", "null", "Null", "NaN", "nan"], strings_can_be_null=True
+                null_values=["na", "NA", "", " ", "null", "Null", "NaN", "nan"],
+                strings_can_be_null=True,
+                # temp fix: force location and output_type_id columns to string
+                column_types={"location": pa.string(), "output_type_id": pa.string()},
             )
             model_output_table = csv.read_csv(model_output_file, convert_options=options)
         else:
-            # parquet requires random access reading (because metadata),
-            # so we use open_input_file instead of open_intput_stream
+            # temp fix: force location and output_type_id columns to string
+            schema_new = pq.read_schema(self.input_file)
+            for field_name in ["location", "output_type_id"]:
+                field_idx = schema_new.get_field_index(field_name)
+                if field_idx >= 0:
+                    schema_new = schema_new.set(field_idx, pa.field(field_name, pa.string()))
             model_output_file = self.fs_input.open_input_file(self.input_file)
-            model_output_table = pq.read_table(model_output_file)
+            model_output_table = pq.read_table(model_output_file, schema=schema_new)
 
         return model_output_table
 

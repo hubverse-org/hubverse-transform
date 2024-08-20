@@ -1,0 +1,7 @@
+"origin_date","target","horizon","location","output_type","output_type_id","value"
+2022-10-08,"wk inc flu hosp",1,"","quantile",0.99,203
+2022-10-08,"wk inc flu hosp",1,02,"mean",,173
+2022-10-08,"wk inc flu hosp",1,"02","mean",NA,174
+2022-10-08,wk inc flu hosp,1,NaN,mean,0.0,175
+2022-10-08,wk inc flu hosp,1,string location,mean,null,176
+2023-10-21,wk flu hosp rate change,-1,27,pmf,111,0.0018554857403307722
