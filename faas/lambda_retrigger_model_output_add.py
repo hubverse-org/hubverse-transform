@@ -43,7 +43,7 @@ def main():
 
                 s3_resource = boto3.resource("s3")
                 s3_object = s3_resource.Object(s3_bucket, key)
-                s3_object.metadata.update({"x-amz-meta-manual-update": update_date})
+                s3_object.metadata.update({"manual-update": update_date})
                 s3_object.copy_from(
                     CopySource={"Bucket": s3_bucket, "Key": key},
                     Metadata=s3_object.metadata,
