@@ -11,6 +11,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "boto3",
     "pyarrow>=16.0.0",
     "cloudpathlib[s3]",
 ]
