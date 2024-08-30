@@ -13,18 +13,20 @@ To install this package:
 pip install git+https://github.com/hubverse-org/hubverse-transform.git
 ```
 
+### Using with a model-output file in a hub on the local filesystem
+
 Sample usage:
 
 ```python
+from pathlib import Path
 from hubverse_transform.model_output import ModelOutputHandler
 
-# to use with a local model-output file
-
 mo = ModelOutputHandler(
-    '~/code/hubverse-cloud/model-output/UMass-flusion/2023-10-14-UMass-flusion.csv',
-    '/.'
-
+    Path('~/code/hubverse-cloud'),
+    Path('raw/2024-05-06-UMass-flusion.csv'),
+    Path('~/code/hubverse-cloud/model-output')
 )
+
 # read the original model-output file into an Arrow table
 original_file = mo.read_file()
 
@@ -34,6 +36,28 @@ transformed_data = mo.add_columns(original_file)
 # write transformed data to parquet
 # TODO: fix this up for local filesystem (it's currently designed for S3 writes)
 # mo.write(transformed_data)
+```
+
+### Using with a model-output file in an S3-based hub
+
+Sample usage:
+
+```python
+from hubverse_transform.model_output import ModelOutputHandler
+
+mo = ModelOutputHandler.from_s3(
+    'example-complex-forecast-hub',  # S3 bucket name
+    'raw/model-output/Flusight-baseline/2022-10-22-Flusight-baseline.csv',  # S3 key'
+)
+
+# read the original model-output file into an Arrow table
+original_file = mo.read_file()
+
+# add new columns to the original model_output data
+transformed_data = mo.add_columns(original_file)
+
+# write transformed data to parquet (requires S3 write access)
+mo.write(transformed_data)
 ```
 
 Sample output of the original and transformed data:
@@ -176,3 +200,15 @@ To package the hubverse_transform code for deployment to the `hubverse-transform
 ```bash
 source deploy_lambda.sh
 ```
+
+### Re-processing model-output files that have already been transformed
+
+If you need to re-run the hubverse-transform function on model-output files that have already been uploaded to S3,
+you can use the `lambda_retrigger_model_output_add.py` script in this repo's `faas/` folder.
+
+This manual action should be done with care but can be handy if data needs to be re-processed (in the event of a
+hubverse-transform bug fix, for example). The script works by updating the S3 metadata for every file in the
+`raw/model-output` file of the hub's S3 bucket. The metadata update then triggers the lambda function that runs
+when new incoming model-output files are detected.
+
+**Note:** You will need write access to the hub's S3 bucket to use this script.

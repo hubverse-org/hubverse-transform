@@ -20,7 +20,7 @@ def s3_bucket_name() -> str:  # type: ignore
     Ultimately, this difficulty probably warrants a closer look at the code structure, because it shouldn't be this hard to test!
     """
 
-    bucket_list = ["hubverse-assets", "test-bucket", "bucket123"]
+    bucket_list = ["hubverse", "hubverse-assets", "test-bucket", "bucket123"]
     for bucket in bucket_list:
         try:
             fs.FileSystem.from_uri(f"s3://{bucket}")

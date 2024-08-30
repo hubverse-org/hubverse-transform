@@ -1,7 +1,9 @@
+# mypy: disable-error-code="operator,attr-defined"
+
 import logging
 import os
 import re
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -14,7 +16,7 @@ handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s -  %(levelname)s - %(name)s - %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 
 class ModelOutputHandler:
@@ -23,11 +25,17 @@ class ModelOutputHandler:
 
     Attributes
     ----------
+    input_uri: str
+        URI of the incoming model-output file to be transformed.
     file_name : str
         Name of the incoming model-output file to be transformed.
     file_type : str
         Type of file to be transformed
         (.parquet, .pqt, .csv currently supported).
+    fs: str
+        The filesystem type of the incoming model-output file.
+    output_uri: str
+        URI of the transformed model-output file.
     round_id : str
         Name of the round_id associated with the model-output file.
     model_id : int
@@ -48,43 +56,49 @@ class ModelOutputHandler:
             Where the transformed model-output file will be saved.
         """
 
-        input_path = hub_path / mo_path  # type: ignore
-        sanitized_input_uri = self.sanitize_uri(input_path)
-        input_filesystem = fs.FileSystem.from_uri(sanitized_input_uri)
-        self.fs_input = input_filesystem[0]
-        self.input_file = input_filesystem[1]
+        # create sanitized input/output URIs
+        sanitized_input_path = AnyPath(self._sanitize_uri(hub_path / mo_path))
+        self.input_uri = str(sanitized_input_path)
+        self.file_name = sanitized_input_path.stem
+        self.file_type = sanitized_input_path.suffix
+        sanitized_output_path = AnyPath(self._sanitize_uri(output_path / f"{self.file_name}.parquet"))
+        self.output_uri = str(sanitized_output_path)
 
-        output_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(output_path))
-        self.fs_output = output_filesystem[0]
-        self.output_path = output_filesystem[1]
+        # create pyarrow filesystem objects to read and write files
+        input_filesystem = fs.FileSystem.from_uri(self.input_uri)
+        self._fs_input = input_filesystem[0]
+        self._input_file = input_filesystem[1]
+        output_filesystem = fs.FileSystem.from_uri(self.output_uri)
+        self._fs_output = output_filesystem[0]
+        self._output_file = output_filesystem[1]
 
-        # get file name and type from input file (use the sanitized version)
-        file_path = AnyPath(self.input_file)
-        self.file_name = file_path.stem  # file name without extension
-        self.file_type = file_path.suffix
+        # parse model-output file name into individual parts
+        file_parts = self._parse_file(self.file_name)
+        self.round_id = file_parts["round_id"]
+        self.model_id = unquote(file_parts["model_id"])
 
-        # handle case when the function is triggered without a file
-        # (e.g., if someone manually creates a folder in an S3 bucket)
-        if not input_path.suffix:
-            msg = "Input file has no extension"
-            self.raise_invalid_file_warning(str(input_path), msg)
+        # filesystem must be supoprted
+        if (file_system := self._fs_input.type_name) not in ["local", "s3"]:
+            raise ValueError(f"Unsupported filesystem: {file_system}")
+        else:
+            self.fs = file_system
 
-        # TODO: Add other input file types as needed
+        # file must be a supported type
         if self.file_type not in [".csv", ".parquet", ".pqt"]:
             msg = f"Input file type {self.file_type} is not supported"
-            self.raise_invalid_file_warning(str(input_path), msg)
+            self._raise_invalid_file_warning(self.input_uri, msg)
 
-        # Parse model-output file name into individual parts
-        # (round_id, model_id)
-        file_parts = self.parse_file(self.file_name)
-        self.round_id = file_parts["round_id"]
-        self.model_id = file_parts["model_id"]
+        # handle case when object creation is triggered without a file
+        # (e.g., if someone manually creates a folder in an S3 bucket)
+        if not mo_path.suffix:
+            msg = "Input file has no extension"
+            self._raise_invalid_file_warning(self.input_uri, msg)
 
     def __repr__(self):
-        return f"ModelOutputHandler('{self.fs_input.type_name}', '{self.input_file}', '{self.output_path}')"
+        return f"ModelOutputHandler('{self.input_uri}')"
 
     def __str__(self):
-        return f"Handle model-output data transforms for {self.input_file}."
+        return f"Handle model-output data transforms for {self._input_file}."
 
     @classmethod
     def from_s3(cls, bucket_name: str, s3_key: str, origin_prefix: str = "raw") -> "ModelOutputHandler":
@@ -93,7 +107,7 @@ class ModelOutputHandler:
 
         Use this method to instantiate a ModelOutputHandler object for
         model-output files store in an S3 bucket (for example, when
-        transformations are invoked via an AWS lambda function).
+        transitions are invoked via an AWS lambda function).
 
         Parameters
         ----------
@@ -140,7 +154,7 @@ class ModelOutputHandler:
 
         return cls(s3_bucket_path, s3_mo_path, s3_output_path)  # type: ignore
 
-    def raise_invalid_file_warning(self, path: str, msg: str) -> None:
+    def _raise_invalid_file_warning(self, path: str, msg: str) -> None:
         """Raise a warning if the class was instantiated with an invalid file."""
 
         logger.warning(
@@ -151,7 +165,7 @@ class ModelOutputHandler:
         )
         raise UserWarning(msg)
 
-    def sanitize_uri(self, path: os.PathLike, safe=":/") -> str:
+    def _sanitize_uri(self, path: os.PathLike, safe=":/") -> str:
         """Sanitize URIs for use with pyarrow's filesystem."""
 
         # remove spaces at the end of a filename (e.g., my-model-output .csv) and
@@ -164,7 +178,7 @@ class ModelOutputHandler:
 
         return clean_uri
 
-    def parse_file(cls, file_name: str) -> dict:
+    def _parse_file(cls, file_name: str) -> dict:
         """Parse model-output file name into individual parts."""
 
         # In practice, Hubverse hubs are formatting round_id as dates in YYYY-MM-DD format.
@@ -194,10 +208,10 @@ class ModelOutputHandler:
     def read_file(self) -> pa.table:
         """Read model-output file into PyArrow table."""
 
-        logger.info(f"Reading file: {self.input_file}")
+        logger.info(f"Reading file: {self.input_uri}")
 
         if self.file_type == ".csv":
-            model_output_file = self.fs_input.open_input_stream(self.input_file)
+            model_output_file = self._fs_input.open_input_stream(self._input_file)
             # normalize incoming missing data values to null, regardless of data type
             options = csv.ConvertOptions(
                 null_values=["na", "NA", "", " ", "null", "Null", "NaN", "nan"],
@@ -208,12 +222,12 @@ class ModelOutputHandler:
             model_output_table = csv.read_csv(model_output_file, convert_options=options)
         else:
             # temp fix: force location and output_type_id columns to string
-            schema_new = pq.read_schema(self.input_file)
+            schema_new = pq.read_schema(self._input_file)
             for field_name in ["location", "output_type_id"]:
                 field_idx = schema_new.get_field_index(field_name)
                 if field_idx >= 0:
                     schema_new = schema_new.set(field_idx, pa.field(field_name, pa.string()))
-            model_output_file = self.fs_input.open_input_file(self.input_file)
+            model_output_file = self._fs_input.open_input_file(self._input_file)
             model_output_table = pq.read_table(model_output_file, schema=schema_new)
 
         return model_output_table
@@ -242,14 +256,12 @@ class ModelOutputHandler:
     def write_parquet(self, updated_model_output_table: pa.table) -> str:
         """Write transformed model-output table to parquet file."""
 
-        transformed_file_path = f"{self.output_path}/{self.file_name}.parquet"
-
-        with self.fs_output.open_output_stream(transformed_file_path) as parquet_file:
+        with self._fs_output.open_output_stream(self._output_file) as parquet_file:
             pq.write_table(updated_model_output_table, parquet_file)
 
-        logger.info(f"Finished writing parquet file: {transformed_file_path}")
+        logger.info(f"Finished writing parquet file: {self.output_uri}")
 
-        return transformed_file_path
+        return self.output_uri
 
     def transform_model_output(self) -> str:
         """Transform model-output data and write to parquet file."""

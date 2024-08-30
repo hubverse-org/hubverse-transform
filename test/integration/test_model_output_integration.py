@@ -71,6 +71,18 @@ def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     assert len(null_output_type_rows) == 8
 
 
+def test_s3_transform():
+    """Test the entire transform operation on a model output file stored in S3."""
+    bucket = "hubutils"
+    key = "testhubs/simple/model-output/baseline/2022-10-08-simple_hub-baseline.csv"
+    mo = ModelOutputHandler.from_s3(bucket, key, "testhubs")
+
+    # Until we incorporate S3 mocks, we'll test everything up until the write operation,
+    # will while fail on a permissions error
+    with pytest.raises(OSError):
+        mo.transform_model_output()
+
+
 def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_schema):
     """Test the parquet schema on files written by ModelOutputHandler."""
     mo_path = "2024-05-04-teamabc-locations_numeric.csv"
