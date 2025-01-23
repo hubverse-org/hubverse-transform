@@ -44,7 +44,7 @@ def test_missing_model_output_id_numeric(tmpdir, test_file_path):
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     # read the output parquet file
     transformed_output = parquet.read_table(output_uri)
@@ -60,7 +60,7 @@ def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_mixed.csv")
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     # read the output parquet file
     transformed_output = parquet.read_table(output_uri)
@@ -77,7 +77,7 @@ def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_s
     mo_full_path = test_file_path.joinpath(mo_path)
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_full_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     actual_schema = pq.read_metadata(output_uri).schema.to_arrow_schema()
     assert expected_model_output_schema.equals(actual_schema)
@@ -99,7 +99,7 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_outp
     mo_full_path = test_file_path.joinpath(mo_path)
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_full_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     # check schema of the original model_output parquet files so we can verify that
     # model_output_id and location are correctly transformed to string

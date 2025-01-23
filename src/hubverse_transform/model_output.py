@@ -296,8 +296,8 @@ class ModelOutputHandler:
 
         return transformed_file_path
 
-    def transform_model_output(self) -> str:
-        """Transform model-output data and write to parquet file."""
+    def add_model_output(self) -> str:
+        """Update a model-output file and write to parquet file."""
 
         model_output_table = self.read_file()
         updated_model_output_table = self.add_columns(model_output_table)
