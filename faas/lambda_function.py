@@ -33,7 +33,7 @@ def lambda_handler(event, context):
             logger.info(f"Adding file: {bucket}/{key}")
             mo.add_model_output()
         elif "objectremoved" in event_name.lower():
-            logger.info("Deleting file: {bucket}/{key}")
+            logger.info(f"Deleting file: {bucket}/{key}")
             mo.delete_model_output()
         else:
             logger.info({
