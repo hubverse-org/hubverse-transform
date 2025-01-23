@@ -304,3 +304,7 @@ class ModelOutputHandler:
         transformed_file_path = self.write_parquet(updated_model_output_table)
 
         return transformed_file_path
+
+    def delete_model_output(self) -> str:
+        """Delete specified model-output file."""
+        return "Not implemented"
