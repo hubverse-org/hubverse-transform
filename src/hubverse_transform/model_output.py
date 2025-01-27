@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from pathlib import Path
 from urllib.parse import quote
 
 import pyarrow as pa  # type: ignore
@@ -20,9 +21,6 @@ logger.setLevel(logging.INFO)
 class ModelOutputHandler:
     """
     Transforms a submitted Hubverse model-output file.
-
-    to a standard format
-    before writing it (or removing it) to a user-facing location.
 
     ModelOutputHandler encapsulates the logic for operating on a Hubverse-format
     model output file before it's added to, updated, or removed from the hub's
@@ -47,7 +45,7 @@ class ModelOutputHandler:
     fs_output : pyarrow.fs.FileSystem
         Pyarrow filesystem that represents the user-facing location of the
         model output file represented by fs_input.
-    output_file : str
+    output_path : str
         Path to the location of the transformed model output file. This path
         excludes the name of the transformed model output file.
     file_name : str
@@ -307,4 +305,4 @@ class ModelOutputHandler:
 
     def delete_model_output(self) -> str:
         """Delete specified model-output file."""
-        return "Not implemented"
+        self.fs_output.delete_file(str(Path(self.output_path) / f"{self.file_name}.parquet"))

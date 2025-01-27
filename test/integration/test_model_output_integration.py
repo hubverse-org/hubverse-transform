@@ -119,3 +119,28 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_outp
 
     # output_type_id transformed to string (leading zeroes retained because original parquet column is float)
     assert transformed_output["output_type_id"].to_pylist()[0] == "0.01"
+
+
+@pytest.mark.parametrize(
+    "file_ext",
+    [
+        ("parquet"),
+        ("csv"),
+    ],
+)
+def test_delete_model_output(tmp_path, test_file_path, file_ext):
+    file_name = "2024-05-04-teamabc-locations_numeric"
+    hub_path = tmp_path / "test_hub"
+    mo_path = pathlib.Path("raw") / "model-output" / "teamabc" / f"{file_name}.{file_ext}"
+    output_path = hub_path / "model-output" / "test_model"
+    output_file = output_path / f"{file_name}.parquet"
+    output_path.mkdir(parents=True)
+    output_file.touch()
+
+    extra_output_file = output_path / "2024-05-11-teamabc-locations_numeric.parquet"
+    extra_output_file.touch()
+
+    mo = ModelOutputHandler(hub_path, mo_path, output_path)
+    assert len(list(output_path.iterdir())) == 2
+    mo.delete_model_output()
+    assert len(list(output_path.iterdir())) == 1
