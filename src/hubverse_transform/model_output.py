@@ -3,8 +3,8 @@ import os
 import re
 from urllib.parse import quote
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+import pyarrow as pa  # type: ignore
+import pyarrow.parquet as pq  # type: ignore
 from cloudpathlib import AnyPath, S3Path
 from pyarrow import csv, fs
 
@@ -19,44 +19,89 @@ logger.setLevel(logging.INFO)
 
 class ModelOutputHandler:
     """
-    Transforms a Hubverse model-output file to a standard format.
+    Transforms a submitted Hubverse model-output file.
+
+    to a standard format
+    before writing it (or removing it) to a user-facing location.
+
+    ModelOutputHandler encapsulates the logic for operating on a Hubverse-format
+    model output file before it's added to, updated, or removed from the hub's
+    user-facing model-output directory. Although this class can be used with
+    model output files on a local filesystem, its primary purpose is to
+    transform model-output data stored in the cloud and make it easier to access
+    outside of the Hubverse.
+
+    This class is instantiated by the hubverse_transform AWS lambda function
+    maintained within the Hubverse AWS account. The lambda function is
+    triggered whenever a csv or parquet file is added to, updated, or removed
+    from the "raw" model output directory of a hub's S3 bucket.
 
     Attributes
     ----------
+    fs_input : pyarrow.fs.FileSystem
+        Pyarrow filesystem for the file being operated on by
+        ModelOutputHandler.
+    input_file : str
+        Full path to the incoming model output file (i.e., the file being
+        transformed by ModelOutputHandler.
+    fs_output : pyarrow.fs.FileSystem
+        Pyarrow filesystem that represents the user-facing location of the
+        model output file represented by fs_input.
+    output_file : str
+        Path to the location of the transformed model output file. This path
+        excludes the name of the transformed model output file.
     file_name : str
-        Name of the incoming model-output file to be transformed.
+        Name of the model output file being transformed (without the
+        file extension).
     file_type : str
-        Type of file to be transformed
-        (.parquet, .pqt, .csv currently supported).
+        File extension of the model output file being transformed. The
+        extensions currently supported are .parquet, .pqt, and .csv.
     round_id : str
-        Name of the round_id associated with the model-output file.
+        Name of the round_id as parsed from `file_name`.
     model_id : int
-        Name of the model_id associated with the model-output file.
+        Name of the model_id as parsed from `file_name`.
     """
 
     def __init__(self, hub_path: os.PathLike, mo_path: os.PathLike, output_path: os.PathLike):
-        """
+        """ModelOutputHandler constructor.
+
         Parameters
         ----------
         hub_path : os.PathLike
-            The location of a Hubverse hub
-            (e.g., S3 bucket name, local filepath).
+            Location of a Hubverse hub. This can be a local path or a cloud
+            path (for example, hubs hosted on AWS S3).
         mo_path : os.PathLike
-            The location of a single model-output file, excluding
-            the hub_path (e.g., S3 key)
+            Path to the model-output original model output file. When
+            ModelOutputHandler is instantiated by the hubverse_transform
+            lambda, mo_path will be the S3 key of the triggering file (i.e.,
+            the file in `raw`, not the post-update, user-facing file)
         output_path : os.PathLike
-            Where the transformed model-output file will be saved.
+            Path to the directory for user-facing model-output files.
+
+        Example
+        --------
+        mo = ModelOutputHandler(
+            hub_path="hubs/my-hub",
+            mo_path="raw/2022-01-01_model_output.csv",
+            output_path="hubs/my-hub/model-output"
+        )
+
+        Notes
+        -----
+        ModelOutputHandler is only instantiated directly for local files.
+        For hubs hosted on S3, the class is instantiated via the `from_S3`
+        class method.
         """
 
         input_path = hub_path / mo_path  # type: ignore
         sanitized_input_uri = self.sanitize_uri(input_path)
-        input_filesystem = fs.FileSystem.from_uri(sanitized_input_uri)
-        self.fs_input = input_filesystem[0]
-        self.input_file = input_filesystem[1]
+        input_filesystem: tuple[fs.FileSystem, str] = fs.FileSystem.from_uri(sanitized_input_uri)
+        self.fs_input: fs.FileSystem = input_filesystem[0]
+        self.input_file: str = input_filesystem[1]
 
-        output_filesystem = fs.FileSystem.from_uri(self.sanitize_uri(output_path))
-        self.fs_output = output_filesystem[0]
-        self.output_path = output_filesystem[1]
+        output_filesystem: tuple[fs.FileSystem, str] = fs.FileSystem.from_uri(self.sanitize_uri(output_path))
+        self.fs_output: fs.FileSystem = output_filesystem[0]
+        self.output_path: str = output_filesystem[1]
 
         # get file name and type from input file (use the sanitized version)
         file_path = AnyPath(self.input_file)
@@ -98,12 +143,13 @@ class ModelOutputHandler:
         Parameters
         ----------
         bucket_name : str
-            The S3 bucket that contains the model-output file.
+            The hub's S3 bucket.
         s3_key : str
-            The S3 object key of the model-output file.
-        origin_prefix : str, default="raw"
+            The S3 object key of the incoming model-output file.
+        origin_prefix : str
             The S3 prefix used to store a hub's original,
             pre-transformed data. Must be the first part of the s3_key.
+            Defaults to `raw`.
 
         Returns
         -------
@@ -118,9 +164,8 @@ class ModelOutputHandler:
         Examples
         --------
         mo_handler = ModelOutputHandler.from_s3(
-            "my-bucket",
-            "original_files/2022-01-01_model_output.csv",
-            "original_files"
+            "my-hub-bucket",
+            "raw/2022-01-01_model_output.csv"
             )
         """
 
