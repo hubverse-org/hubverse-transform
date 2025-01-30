@@ -144,3 +144,8 @@ def test_delete_model_output(tmp_path, test_file_path, file_ext):
     assert len(list(output_path.iterdir())) == 2
     mo.delete_model_output()
     assert len(list(output_path.iterdir())) == 1
+
+    # test missing model output file
+    with pytest.raises(UserWarning):
+        mo.delete_model_output()
+    assert len(list(output_path.iterdir())) == 1

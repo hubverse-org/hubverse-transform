@@ -110,12 +110,12 @@ class ModelOutputHandler:
         # (e.g., if someone manually creates a folder in an S3 bucket)
         if not input_path.suffix:
             msg = "Input file has no extension"
-            self.raise_invalid_file_warning(str(input_path), msg)
+            self.raise_user_warning(str(input_path), msg)
 
         # TODO: Add other input file types as needed
         if self.file_type not in [".csv", ".parquet", ".pqt"]:
             msg = f"Input file type {self.file_type} is not supported"
-            self.raise_invalid_file_warning(str(input_path), msg)
+            self.raise_user_warning(str(input_path), msg)
 
         # Parse model-output file name into individual parts
         # (round_id, model_id)
@@ -183,7 +183,7 @@ class ModelOutputHandler:
 
         return cls(s3_bucket_path, s3_mo_path, s3_output_path)  # type: ignore
 
-    def raise_invalid_file_warning(self, path: str, msg: str) -> None:
+    def raise_user_warning(self, path: str, msg: str) -> None:
         """Raise a warning if the class was instantiated with an invalid file."""
 
         logger.warning(
@@ -303,6 +303,11 @@ class ModelOutputHandler:
 
         return transformed_file_path
 
-    def delete_model_output(self) -> str:
+    def delete_model_output(self) -> None:
         """Delete specified model-output file."""
-        self.fs_output.delete_file(str(Path(self.output_path) / f"{self.file_name}.parquet"))
+        mo_path = str(Path(self.output_path) / f"{self.file_name}.parquet")
+        try:
+            self.fs_output.delete_file(mo_path)
+        except FileNotFoundError:
+            msg = f"Model output file not found for deletion"
+            self.raise_user_warning(mo_path, msg)
