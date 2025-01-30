@@ -309,5 +309,5 @@ class ModelOutputHandler:
         try:
             self.fs_output.delete_file(mo_path)
         except FileNotFoundError:
-            msg = f"Model output file not found for deletion"
+            msg = "Model output file not found for deletion"
             self.raise_user_warning(mo_path, msg)
