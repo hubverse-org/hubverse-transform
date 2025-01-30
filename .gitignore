@@ -1,5 +1,8 @@
 .DS_Store
 
+# This project doesn't use the uv lockfile
+uv.lock
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

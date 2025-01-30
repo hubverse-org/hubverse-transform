@@ -232,7 +232,7 @@ def test_transform_model_output_path(test_csv_file, tmpdir):
     output_path = AnyPath(str(tmpdir.mkdir("model-output")))
 
     mo = ModelOutputHandler(hub_path, mo_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     input_path = Path(test_csv_file)
     output_path = Path(output_uri)

@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from pathlib import Path
 from urllib.parse import quote
 
 import pyarrow as pa  # type: ignore
@@ -20,9 +21,6 @@ logger.setLevel(logging.INFO)
 class ModelOutputHandler:
     """
     Transforms a submitted Hubverse model-output file.
-
-    to a standard format
-    before writing it (or removing it) to a user-facing location.
 
     ModelOutputHandler encapsulates the logic for operating on a Hubverse-format
     model output file before it's added to, updated, or removed from the hub's
@@ -47,7 +45,7 @@ class ModelOutputHandler:
     fs_output : pyarrow.fs.FileSystem
         Pyarrow filesystem that represents the user-facing location of the
         model output file represented by fs_input.
-    output_file : str
+    output_path : str
         Path to the location of the transformed model output file. This path
         excludes the name of the transformed model output file.
     file_name : str
@@ -112,12 +110,12 @@ class ModelOutputHandler:
         # (e.g., if someone manually creates a folder in an S3 bucket)
         if not input_path.suffix:
             msg = "Input file has no extension"
-            self.raise_invalid_file_warning(str(input_path), msg)
+            self.raise_user_warning(str(input_path), msg)
 
         # TODO: Add other input file types as needed
         if self.file_type not in [".csv", ".parquet", ".pqt"]:
             msg = f"Input file type {self.file_type} is not supported"
-            self.raise_invalid_file_warning(str(input_path), msg)
+            self.raise_user_warning(str(input_path), msg)
 
         # Parse model-output file name into individual parts
         # (round_id, model_id)
@@ -185,7 +183,7 @@ class ModelOutputHandler:
 
         return cls(s3_bucket_path, s3_mo_path, s3_output_path)  # type: ignore
 
-    def raise_invalid_file_warning(self, path: str, msg: str) -> None:
+    def raise_user_warning(self, path: str, msg: str) -> None:
         """Raise a warning if the class was instantiated with an invalid file."""
 
         logger.warning(
@@ -296,11 +294,20 @@ class ModelOutputHandler:
 
         return transformed_file_path
 
-    def transform_model_output(self) -> str:
-        """Transform model-output data and write to parquet file."""
+    def add_model_output(self) -> str:
+        """Update a model-output file and write to parquet file."""
 
         model_output_table = self.read_file()
         updated_model_output_table = self.add_columns(model_output_table)
         transformed_file_path = self.write_parquet(updated_model_output_table)
 
         return transformed_file_path
+
+    def delete_model_output(self) -> None:
+        """Delete specified model-output file."""
+        mo_path = str(Path(self.output_path) / f"{self.file_name}.parquet")
+        try:
+            self.fs_output.delete_file(mo_path)
+        except FileNotFoundError:
+            msg = "Model output file not found for deletion"
+            self.raise_user_warning(mo_path, msg)

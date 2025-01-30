@@ -44,7 +44,7 @@ def test_missing_model_output_id_numeric(tmpdir, test_file_path):
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     # read the output parquet file
     transformed_output = parquet.read_table(output_uri)
@@ -60,7 +60,7 @@ def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_mixed.csv")
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     # read the output parquet file
     transformed_output = parquet.read_table(output_uri)
@@ -77,7 +77,7 @@ def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_s
     mo_full_path = test_file_path.joinpath(mo_path)
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_full_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     actual_schema = pq.read_metadata(output_uri).schema.to_arrow_schema()
     assert expected_model_output_schema.equals(actual_schema)
@@ -99,7 +99,7 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_outp
     mo_full_path = test_file_path.joinpath(mo_path)
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo = ModelOutputHandler(pathlib.Path(tmpdir), mo_full_path, output_path)
-    output_uri = mo.transform_model_output()
+    output_uri = mo.add_model_output()
 
     # check schema of the original model_output parquet files so we can verify that
     # model_output_id and location are correctly transformed to string
@@ -119,3 +119,33 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_outp
 
     # output_type_id transformed to string (leading zeroes retained because original parquet column is float)
     assert transformed_output["output_type_id"].to_pylist()[0] == "0.01"
+
+
+@pytest.mark.parametrize(
+    "file_ext",
+    [
+        ("parquet"),
+        ("csv"),
+    ],
+)
+def test_delete_model_output(tmp_path, test_file_path, file_ext):
+    file_name = "2024-05-04-teamabc-locations_numeric"
+    hub_path = tmp_path / "test_hub"
+    mo_path = pathlib.Path("raw") / "model-output" / "teamabc" / f"{file_name}.{file_ext}"
+    output_path = hub_path / "model-output" / "test_model"
+    output_file = output_path / f"{file_name}.parquet"
+    output_path.mkdir(parents=True)
+    output_file.touch()
+
+    extra_output_file = output_path / "2024-05-11-teamabc-locations_numeric.parquet"
+    extra_output_file.touch()
+
+    mo = ModelOutputHandler(hub_path, mo_path, output_path)
+    assert len(list(output_path.iterdir())) == 2
+    mo.delete_model_output()
+    assert len(list(output_path.iterdir())) == 1
+
+    # test missing model output file
+    with pytest.raises(UserWarning):
+        mo.delete_model_output()
+    assert len(list(output_path.iterdir())) == 1
