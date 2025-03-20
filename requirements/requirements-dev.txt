@@ -22,7 +22,7 @@ mypy-extensions==1.0.0
     # via mypy
 numpy==1.26.4
     # via pyarrow
-packaging==24.0
+packaging==24.2
     # via pytest
 pluggy==1.5.0
     # via pytest
