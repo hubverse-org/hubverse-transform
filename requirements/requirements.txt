@@ -14,7 +14,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-numpy==1.26.4
+numpy==2.2.4
     # via pyarrow
 pyarrow==16.1.0
     # via hubverse-transform (pyproject.toml)

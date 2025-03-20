@@ -20,7 +20,7 @@ mypy==1.15.0
     # via hubverse-transform (pyproject.toml)
 mypy-extensions==1.0.0
     # via mypy
-numpy==1.26.4
+numpy==2.2.4
     # via pyarrow
 packaging==24.2
     # via pytest
