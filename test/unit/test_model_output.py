@@ -3,6 +3,7 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 from cloudpathlib import AnyPath
+
 from hubverse_transform.model_output import ModelOutputHandler
 
 # the mocker fixture used throughout is provided by pytest-mock

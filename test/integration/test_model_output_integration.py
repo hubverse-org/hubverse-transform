@@ -4,8 +4,9 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import pytest
-from hubverse_transform.model_output import ModelOutputHandler
 from pyarrow import parquet
+
+from hubverse_transform.model_output import ModelOutputHandler
 
 
 @pytest.fixture()
