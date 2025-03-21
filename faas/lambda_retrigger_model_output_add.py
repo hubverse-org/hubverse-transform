@@ -2,6 +2,7 @@
 Update metadata for all files in the raw/model-output/ directory of a specified AWS S3 bucket.
 This script can be used for force re-triggering the lambda that transforms hubverse model-output files.
 """
+
 import argparse
 from datetime import datetime, timezone
 
