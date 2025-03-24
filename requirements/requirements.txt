@@ -16,7 +16,7 @@ jmespath==1.0.1
     #   botocore
 numpy==1.26.4
     # via pyarrow
-pyarrow==16.1.0
+pyarrow==19.0.1
     # via hubverse-transform (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via botocore
