@@ -8,6 +8,7 @@ This handler, along with the actual transformation module (hubverse_transform), 
 - To avoid tightly coupling AWS infrastructure to the more general hubverse_transform module that can be used for hubs hosted elsewhere
 - To allow faster iteration and testing of the hubverse_transform module without needing to update the IaC repo or redeploy AWS resources
 """
+
 import json
 import logging
 import urllib.parse
@@ -36,20 +37,24 @@ def lambda_handler(event, context):
             logger.info(f"Deleting file: {bucket}/{key}")
             mo.delete_model_output()
         else:
-            logger.info({
-                "msg": "Event type not supported, skipping",
-                "event_source": event_source,
-                "event": event_name,
-                "file": f"{bucket}/{key}"
-            })
+            logger.info(
+                {
+                    "msg": "Event type not supported, skipping",
+                    "event_source": event_source,
+                    "event": event_name,
+                    "file": f"{bucket}/{key}",
+                }
+            )
             return
     except UserWarning:
         pass
     except Exception as e:
-        logger.exception({
-            "msg": "Error handling file",
-            "event": event_name,
-            "event_source": event_source,
-            "file": f"{bucket}/{key}",
-            "error": str(e)
-        })
+        logger.exception(
+            {
+                "msg": "Error handling file",
+                "event": event_name,
+                "event_source": event_source,
+                "file": f"{bucket}/{key}",
+                "error": str(e),
+            }
+        )
