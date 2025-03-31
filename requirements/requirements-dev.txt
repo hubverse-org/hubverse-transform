@@ -34,7 +34,7 @@ pytest-mock==3.14.0
     # via hubverse-transform (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via botocore
-ruff==0.11.1
+ruff==0.11.2
     # via hubverse-transform (pyproject.toml)
 s3transfer==0.11.4
     # via boto3
