@@ -1,4 +1,4 @@
-# instruct GitHub dependabot to scan github actions and python code for dependency updates
+# instruct GitHub dependabot to scan github actions and Python code for dependency updates
 
 version: 2
 updates:
@@ -7,8 +7,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # group all run-of-the mill updates into a single pull request
+    groups:
+      gha-updates:
+        applies-to: version-updates
+        update-types:
+          - patch
+          - minor
 
   - package-ecosystem: "pip"
-    directory: "/requirements/"
+    directory: "/"
     schedule:
       interval: "weekly"
+    # group all run-of-the mill updates into a single pull request
+    groups:
+      py-updates:
+        applies-to: version-updates
+        update-types:
+          - patch
+          - minor
