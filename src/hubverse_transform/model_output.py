@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -7,6 +8,7 @@ from urllib.parse import quote
 import pyarrow as pa  # type: ignore
 import pyarrow.parquet as pq  # type: ignore
 from cloudpathlib import AnyPath, S3Path
+from hubdata import create_hub_schema
 from pyarrow import csv, fs
 
 # Log to stdout
@@ -92,14 +94,14 @@ class ModelOutputHandler:
         """
 
         input_path = hub_path / mo_path  # type: ignore
-        sanitized_input_uri = self.sanitize_uri(input_path)
-        input_filesystem: tuple[fs.FileSystem, str] = fs.FileSystem.from_uri(sanitized_input_uri)
+        input_filesystem: tuple[fs.FileSystem, str] = fs.FileSystem.from_uri(self.sanitize_uri(input_path))
         self.fs_input: fs.FileSystem = input_filesystem[0]
         self.input_file: str = input_filesystem[1]
 
         output_filesystem: tuple[fs.FileSystem, str] = fs.FileSystem.from_uri(self.sanitize_uri(output_path))
         self.fs_output: fs.FileSystem = output_filesystem[0]
         self.output_path: str = output_filesystem[1]
+        self.tasks = self._read_tasks(hub_path)  # required by read_file() to get schema
 
         # get file name and type from input file (use the sanitized version)
         file_path = AnyPath(self.input_file)
@@ -141,9 +143,10 @@ class ModelOutputHandler:
         Parameters
         ----------
         bucket_name : str
-            The hub's S3 bucket.
+            The hub's S3 bucket. E.g., "covid-variant-nowcast-hub"
         s3_key : str
             The S3 object key of the incoming model-output file.
+            E.g., "raw/model-output/Hub-ensemble/2025-07-30-Hub-ensemble.parquet"
         origin_prefix : str
             The S3 prefix used to store a hub's original,
             pre-transformed data. Must be the first part of the s3_key.
@@ -182,6 +185,27 @@ class ModelOutputHandler:
         s3_output_path = S3Path(f"s3://{bucket_name}/{destination_path}")
 
         return cls(s3_bucket_path, s3_mo_path, s3_output_path)  # type: ignore
+
+
+    def _read_tasks(self, hub_path):
+        """
+        __init()__ helper that tries to load tasks.json from hub_path so that we can determine the read schema for it
+        """
+        tasks = None
+        hub_path = self.sanitize_uri(hub_path)
+        try:
+            filesystem, filesystem_path = fs.FileSystem.from_uri(hub_path)
+            tasks_json_path = filesystem_path + '/hub-config/tasks.json'
+            if filesystem.get_file_info(tasks_json_path).type == fs.FileType.NotFound:
+                logger.warning(f'could not find tasks.json: tasks_json_path={tasks_json_path!r}, '
+                               f'filesystem={filesystem}')
+            else:
+                with filesystem.open_input_file(tasks_json_path) as tasks_fp:
+                    tasks = json.load(tasks_fp)
+        except Exception as exc:
+            logger.warning(f'exception trying to read tasks.json: {exc!r}')
+        return tasks
+
 
     def raise_user_warning(self, path: str, msg: str) -> None:
         """Raise a warning if the class was instantiated with an invalid file."""
@@ -236,30 +260,42 @@ class ModelOutputHandler:
 
     def read_file(self) -> pa.table:
         """Read model-output file into PyArrow table."""
-
         logger.info(f"Reading file: {self.input_file}")
-
         if self.file_type == ".csv":
             model_output_file = self.fs_input.open_input_stream(self.input_file)
+            schema = self._get_schema(self.tasks, self.file_type, model_output_file)
             # normalize incoming missing data values to null, regardless of data type
             options = csv.ConvertOptions(
                 null_values=["na", "NA", "", " ", "null", "Null", "NaN", "nan"],
                 strings_can_be_null=True,
-                # temp fix: force location and output_type_id columns to string
-                column_types={"location": pa.string(), "output_type_id": pa.string()},
-            )
+                column_types=schema)
             model_output_table = csv.read_csv(model_output_file, convert_options=options)
         else:
-            # temp fix: force location and output_type_id columns to string
             model_output_file = self.fs_input.open_input_file(self.input_file)
-            schema_new = pq.read_schema(model_output_file)
-            for field_name in ["location", "output_type_id"]:
-                field_idx = schema_new.get_field_index(field_name)
-                if field_idx >= 0:
-                    schema_new = schema_new.set(field_idx, pa.field(field_name, pa.string()))
-            model_output_table = pq.read_table(model_output_file, schema=schema_new)
+            schema = self._get_schema(self.tasks, self.file_type, model_output_file)
+            model_output_table = pq.read_table(model_output_file, schema=schema)
 
         return model_output_table
+
+
+    @classmethod
+    def _get_schema(cls, tasks, file_type, model_output_file):
+        """
+        read_file() helper that returns a pa.schema. uses my tasks if they were able to be loaded. o/w we hard-code a
+        few common hub columns and take our chances!
+        """
+        if tasks:
+            schema = create_hub_schema(tasks)
+        elif file_type == ".csv":
+            schema = pa.schema({"location": pa.string(), "output_type_id": pa.string()})
+        else:
+            schema = pq.read_schema(model_output_file)
+            for field_name in ["location", "output_type_id"]:  # force location and output_type_id columns to string
+                field_idx = schema.get_field_index(field_name)
+                if field_idx >= 0:
+                    schema = schema.set(field_idx, pa.field(field_name, pa.string()))
+        return schema
+
 
     def add_columns(self, model_output_table: pa.table) -> pa.table:
         """Add model-output metadata columns to PyArrow table."""
