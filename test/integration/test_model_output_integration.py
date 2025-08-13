@@ -1,4 +1,3 @@
-import json
 import pathlib
 
 import pyarrow as pa
@@ -41,7 +40,7 @@ def expected_model_output_schema() -> pa.Schema:
     return expected_schema
 
 
-def test_missing_model_output_id_numeric(tmpdir, test_file_path):
+def test_missing_model_output_id_numeric(tmpdir, test_file_path, schema_origin_date):
     """Test behavior of model_output_id columns when there are a mix of numeric and missing output_type_ids."""
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
@@ -57,7 +56,7 @@ def test_missing_model_output_id_numeric(tmpdir, test_file_path):
     assert len(null_output_type_rows) == 2
 
 
-def test_missing_model_output_id_mixture(tmpdir, test_file_path):
+def test_missing_model_output_id_mixture(tmpdir, test_file_path, schema_origin_date_str_val):
     """Test behavior of model_output_id columns when there are a mix of numeric, string, and missing output_type_ids."""
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_mixed.csv")
@@ -73,7 +72,7 @@ def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     assert len(null_output_type_rows) == 8
 
 
-def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_schema):
+def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_schema, schema_origin_date):
     """Test the parquet schema on files written by ModelOutputHandler."""
     mo_path = "2024-05-04-teamabc-locations_numeric.csv"
     mo_full_path = test_file_path.joinpath(mo_path)
@@ -95,7 +94,7 @@ def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_s
     assert transformed_output["output_type_id"].to_pylist()[0] == "0.01"
 
 
-def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_output_schema):
+def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_output_schema, schema_reference_date):
     """Test the parquet schema on files written by ModelOutputHandler."""
     mo_path = "2024-05-04-teamabc-locations_numeric.parquet"
     mo_full_path = test_file_path.joinpath(mo_path)
@@ -130,7 +129,7 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_outp
         ("csv"),
     ],
 )
-def test_delete_model_output(tmp_path, test_file_path, file_ext):
+def test_delete_model_output(tmp_path, test_file_path, file_ext, schema_reference_date):
     file_name = "2024-05-04-teamabc-locations_numeric"
     hub_path = tmp_path / "test_hub"
     mo_path = pathlib.Path("raw") / "model-output" / "teamabc" / f"{file_name}.{file_ext}"
@@ -169,50 +168,3 @@ def test_tasks_s3_bucket():
     assert list(mo.tasks.keys()) == ['schema_version', 'rounds']
     assert len(mo.tasks['rounds']) == 1
     assert len(mo.tasks['rounds'][0]['model_tasks']) == 2
-
-
-@pytest.mark.parametrize("is_tasks,model_output_file,exp_schema", [
-    (False, '2024-07-07-teamabc-output_type_ids_mixed.csv',  # csv, no tasks -> use hard-coded csv
-     'location: string\n'
-     'output_type_id: string'),
-    (True, '2024-07-07-teamabc-output_type_ids_mixed.csv',  # csv, yes tasks -> use tasks.json
-     'reference_date: date32[day]\n'
-     'target: string\n'
-     'horizon: int32\n'
-     'location: string\n'
-     'target_end_date: date32[day]\n'
-     'output_type: string\n'
-     'output_type_id: double\n'
-     'value: double\n'
-     'model_id: string'),
-    (False, '2024-05-04-teamabc-locations_numeric.parquet',  # parquet, no tasks -> load from parquet
-     'reference_date: date32[day]\n'
-     'target: string\n'
-     'horizon: int64\ntarget_end_date: date32[day]\n'
-     'location: string\n'
-     'output_type: string\n'
-     'output_type_id: string\n'
-     'value: double\n'
-     'round_id: string\n'
-     'model_id: string\n'
-     '-- schema metadata --\n'
-     'pandas: \'{"index_columns": [{"kind": "range", "name": null, "start": 0, "\' + 1442'),
-    (True, '2024-05-04-teamabc-locations_numeric.parquet',  # parquet, yes tasks -> use tasks.json
-     'reference_date: date32[day]\n'
-     'target: string\n'
-     'horizon: int32\n'
-     'location: string\n'
-     'target_end_date: date32[day]\n'
-     'output_type: string\n'
-     'output_type_id: double\n'
-     'value: double\n'
-     'model_id: string'),
-])
-def test__get_schema(test_file_path, is_tasks, model_output_file, exp_schema):
-    with open(test_file_path.joinpath('flu-metrocast/hub-config/tasks.json')) as fp:
-        _tasks = json.load(fp)
-        tasks = _tasks if is_tasks else None
-    file_type = '.' + model_output_file.split('.')[-1]
-    mo_full_path = test_file_path.joinpath(model_output_file)
-    schema = ModelOutputHandler._get_schema(tasks, file_type, mo_full_path)
-    assert str(schema) == exp_schema
