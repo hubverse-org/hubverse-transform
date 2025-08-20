@@ -40,7 +40,7 @@ def expected_model_output_schema() -> pa.Schema:
     return expected_schema
 
 
-def test_missing_model_output_id_numeric(tmpdir, test_file_path):
+def test_missing_model_output_id_numeric(tmpdir, test_file_path, schema_origin_date):
     """Test behavior of model_output_id columns when there are a mix of numeric and missing output_type_ids."""
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
@@ -56,7 +56,7 @@ def test_missing_model_output_id_numeric(tmpdir, test_file_path):
     assert len(null_output_type_rows) == 2
 
 
-def test_missing_model_output_id_mixture(tmpdir, test_file_path):
+def test_missing_model_output_id_mixture(tmpdir, test_file_path, schema_origin_date_str_val):
     """Test behavior of model_output_id columns when there are a mix of numeric, string, and missing output_type_ids."""
     output_path = pathlib.Path(tmpdir.mkdir("model-output"))
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_mixed.csv")
@@ -72,7 +72,7 @@ def test_missing_model_output_id_mixture(tmpdir, test_file_path):
     assert len(null_output_type_rows) == 8
 
 
-def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_schema):
+def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_schema, schema_origin_date):
     """Test the parquet schema on files written by ModelOutputHandler."""
     mo_path = "2024-05-04-teamabc-locations_numeric.csv"
     mo_full_path = test_file_path.joinpath(mo_path)
@@ -94,7 +94,7 @@ def test_model_output_csv_schema(tmpdir, test_file_path, expected_model_output_s
     assert transformed_output["output_type_id"].to_pylist()[0] == "0.01"
 
 
-def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_output_schema):
+def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_output_schema, schema_reference_date):
     """Test the parquet schema on files written by ModelOutputHandler."""
     mo_path = "2024-05-04-teamabc-locations_numeric.parquet"
     mo_full_path = test_file_path.joinpath(mo_path)
@@ -129,7 +129,7 @@ def test_model_output_parquet_schema(tmpdir, test_file_path, expected_model_outp
         ("csv"),
     ],
 )
-def test_delete_model_output(tmp_path, test_file_path, file_ext):
+def test_delete_model_output(tmp_path, test_file_path, file_ext, schema_reference_date):
     file_name = "2024-05-04-teamabc-locations_numeric"
     hub_path = tmp_path / "test_hub"
     mo_path = pathlib.Path("raw") / "model-output" / "teamabc" / f"{file_name}.{file_ext}"
@@ -150,3 +150,21 @@ def test_delete_model_output(tmp_path, test_file_path, file_ext):
     with pytest.raises(UserWarning):
         mo.delete_model_output()
     assert len(list(output_path.iterdir())) == 1
+
+
+def test_load_tasks_local_fs(tmpdir, test_file_path):
+    hub_path = test_file_path.joinpath("flu-metrocast")  # test/integration/data/flu-metrocast
+    mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric.csv")
+    output_path = pathlib.Path(tmpdir.mkdir("model-output"))
+    mo = ModelOutputHandler(hub_path, mo_path, output_path)
+    assert list(mo.tasks.keys()) == ['schema_version', 'rounds', 'output_type_id_datatype', 'derived_task_ids']
+
+
+def test_tasks_s3_bucket():
+    # NB: this does a LIVE read from S3. (it cannot write, though, due to inadequate permissions)
+    mo = ModelOutputHandler.from_s3('hubverse-cloud',
+                                    'raw/model-output/FluSight-ensemble/2023-10-14-FluSight-ensemble.csv')
+    # spot-check tasks
+    assert list(mo.tasks.keys()) == ['schema_version', 'rounds']
+    assert len(mo.tasks['rounds']) == 1
+    assert len(mo.tasks['rounds'][0]['model_tasks']) == 2

@@ -3,8 +3,8 @@ name = "hubverse-transform"
 description = "Utilities for Hubverse model-output transformations"
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.9"
-version = "0.1.0"
+requires-python = '>=3.10'
+version = "1.0.0"
 classifiers = [
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: MIT License',
@@ -14,6 +14,7 @@ dependencies = [
     "boto3",
     "pyarrow>=16.0.0",
     "cloudpathlib[s3]",
+    "hubdata>=0.1.3",
 ]
 authors = [
     {name = "Becky Sweger", email = "rsweger@umass.edu"},

@@ -10,7 +10,7 @@ from hubverse_transform.model_output import ModelOutputHandler
 # see conftest.py for definition of other fixtures (e.g., s3_bucket_name)
 
 
-def test_new_instance():
+def test_new_instance(schema_empty):
     hub_path = AnyPath("mock:bucket123")
     mo_path = AnyPath("raw/prefix1/prefix2/2420-01-01-team_one-model.csv")
     output_path = AnyPath("mock:bucket123/prefix1/prefix2")
@@ -32,7 +32,7 @@ def test_new_instance():
         ("raw/prefix/2420-01-01____look-at-all-the-hyphens-.csv", "2420-01-01", "look-at-all-the-hyphens-"),
     ],
 )
-def test_parse_file(tmpdir, s3_bucket_name, mo_path_str, expected_round_id, expected_model_id):
+def test_parse_file(tmpdir, s3_bucket_name, mo_path_str, expected_round_id, expected_model_id, schema_empty):
     """Test getting round_id and model_id from file name."""
     mo_path = AnyPath(mo_path_str)
     output_path = AnyPath(tmpdir)
@@ -78,9 +78,8 @@ def test_parse_file(tmpdir, s3_bucket_name, mo_path_str, expected_round_id, expe
         ),
     ],
 )
-def test_from_s3_special_characters(
-    s3_bucket_name, mo_path_str, expected_input_file, expected_output_path, expected_file_name, expected_model_id
-):
+def test_from_s3_special_characters(s3_bucket_name, mo_path_str, expected_input_file, expected_output_path,
+                                    expected_file_name, expected_model_id, schema_empty):
     """Test special characters when instantiating ModelOutputHandler via from_s3"""
     # ensure spaces and other characters in directory, filename, s3 key, etc. are handled correctly
     mo = ModelOutputHandler.from_s3(s3_bucket_name, mo_path_str)
@@ -149,7 +148,7 @@ def test_from_s3_missing_prefix():
         ("raw/prefix1/prefix2/01-02-2440-team-model-name.csv", ValueError),
     ],
 )
-def test_parse_s3_key_invalid_format(tmpdir, file_uri, expected_error):
+def test_parse_s3_key_invalid_format(tmpdir, file_uri, expected_error, schema_empty):
     # ensure ValueError is raised for invalid model-output file name format
     with pytest.raises(expected_error):
         hub_path = AnyPath(tmpdir)
@@ -157,7 +156,7 @@ def test_parse_s3_key_invalid_format(tmpdir, file_uri, expected_error):
         ModelOutputHandler(hub_path, mo_path, hub_path)
 
 
-def test_add_columns(tmpdir, model_output_table):
+def test_add_columns(tmpdir, model_output_table, schema_empty):
     hub_path = AnyPath(tmpdir)
     mo_path = AnyPath("raw/prefix1/prefix2/2420-01-01-team-model.csv")
     mo = ModelOutputHandler(hub_path, mo_path, hub_path)
@@ -169,7 +168,7 @@ def test_add_columns(tmpdir, model_output_table):
     assert set(["round_id", "model_id"]).issubset(result.column_names)
 
 
-def test_added_column_values(tmpdir, model_output_table):
+def test_added_column_values(tmpdir, model_output_table, schema_empty):
     hub_path = AnyPath(tmpdir)
     mo_path = AnyPath("raw/prefix1/prefix2/2420-01-01-janewaysaddiction-voyager1.csv")
 
@@ -186,7 +185,7 @@ def test_added_column_values(tmpdir, model_output_table):
     result.column("model_id").unique()[0].as_py() == "janewaysaddiction-voyager1"
 
 
-def test_read_file_csv(tmpdir, test_csv_file, model_output_table):
+def test_read_file_csv(tmpdir, test_csv_file, model_output_table, schema_empty):
     hub_path = AnyPath(tmpdir)
     mo_path = AnyPath(test_csv_file)
     mo = ModelOutputHandler(hub_path, mo_path, hub_path)
@@ -200,7 +199,7 @@ def test_read_file_csv(tmpdir, test_csv_file, model_output_table):
     assert str(output_type_id_col[3]) == "large_increase"
 
 
-def test_read_file_parquet(tmpdir, test_parquet_file, model_output_table):
+def test_read_file_parquet(tmpdir, test_parquet_file, model_output_table, schema_empty):
     hub_path = AnyPath(tmpdir)
     mo_path = AnyPath(test_parquet_file)
     mo = ModelOutputHandler(hub_path, mo_path, hub_path)
@@ -214,7 +213,7 @@ def test_read_file_parquet(tmpdir, test_parquet_file, model_output_table):
     assert str(output_type_id_col[3]) == "large_increase"
 
 
-def test_write_parquet(tmpdir, model_output_table):
+def test_write_parquet(tmpdir, model_output_table, schema_empty):
     hub_path = AnyPath(tmpdir)
     mo_path = AnyPath("raw/prefix1/prefix2/2420-01-01-team-model.csv")
     output_path = AnyPath(tmpdir.mkdir("model-output"))
@@ -227,7 +226,7 @@ def test_write_parquet(tmpdir, model_output_table):
     assert actual_output_file_path == expected_output_file_path
 
 
-def test_transform_model_output_path(test_csv_file, tmpdir):
+def test_transform_model_output_path(test_csv_file, tmpdir, schema_empty):
     hub_path = AnyPath(tmpdir)
     mo_path = AnyPath(test_csv_file)
     output_path = AnyPath(str(tmpdir.mkdir("model-output")))
@@ -252,7 +251,7 @@ def test_transform_model_output_path(test_csv_file, tmpdir):
         ("raw/prefix1/prefix2/01-02-2440-team-model-name"),
     ],
 )
-def test_invalid_file_warning(tmpdir, file_uri):
+def test_invalid_file_warning(tmpdir, file_uri, schema_empty):
     # ensure ValueError is raised for invalid model-output file name format
 
     hub_path = AnyPath(tmpdir)
@@ -275,7 +274,7 @@ def test_file_path() -> Path:
     return test_file_path
 
 
-def test_location_or_output_type_id_column_schema_csv(tmpdir, test_file_path):
+def test_location_or_output_type_id_column_schema_csv(tmpdir, test_file_path, schema_origin_date):
     hub_path = AnyPath(tmpdir)
 
     expected_column_names = [
@@ -312,7 +311,8 @@ def test_location_or_output_type_id_column_schema_csv(tmpdir, test_file_path):
     assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values
 
 
-def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path):
+def test_location_or_output_type_id_column_schema_parquet_case_1(tmpdir, test_file_path,
+                                                                 schema_origin_date_no_model_round_ids):
     hub_path = AnyPath(tmpdir)
 
     expected_column_names = [
@@ -338,12 +338,27 @@ def test_location_or_output_type_id_column_schema_parquet(tmpdir, test_file_path
     assert pyarrow_table["location"].to_pylist() == expected_location_values
     assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values
 
+
+def test_location_or_output_type_id_column_schema_parquet_case_2(tmpdir, test_file_path,
+                                                                 schema_origin_date_no_model_round_ids_loc):
+    hub_path = AnyPath(tmpdir)
+
+    expected_column_names = [
+        "origin_date",
+        "target",
+        "horizon",
+        # "location",
+        "output_type",
+        "output_type_id",
+        "value",
+    ]
+    expected_output_type_id_values = ["0.99", None, None, "0", None, "111"]
+
     # case 2: no location just output_type_id with numeric value types
     mo_path = test_file_path.joinpath("2024-07-07-teamabc-output_type_ids_numeric_no_location.parquet")
     mo = ModelOutputHandler(hub_path, mo_path, hub_path)
     pyarrow_table = mo.read_file()
     assert len(pyarrow_table) == 6
-    expected_column_names.remove("location")
     assert pyarrow_table.column_names == expected_column_names
     assert pa.types.is_string(pyarrow_table.schema.field("output_type_id").type)
     assert pyarrow_table["output_type_id"].to_pylist() == expected_output_type_id_values

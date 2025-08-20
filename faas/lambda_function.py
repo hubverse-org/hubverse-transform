@@ -23,9 +23,11 @@ def lambda_handler(event, context):
     logger.info("Received event: " + json.dumps(event, indent=2))
 
     # info from the S3 event
-    event_source = event["Records"][0]["eventSource"]
-    event_name = event["Records"][0]["eventName"]
-    bucket = event["Records"][0]["s3"]["bucket"]["name"]
+    event_source = event["Records"][0]["eventSource"]  # ex: "aws:s3"
+    event_name = event["Records"][0]["eventName"]  # ex: "ObjectCreated:Put"
+    bucket = event["Records"][0]["s3"]["bucket"]["name"]  # ex: "covid-variant-nowcast-hub"
+
+    # ex: "raw/model-output/Hub-ensemble/2025-07-30-Hub-ensemble.parquet" :
     key = urllib.parse.unquote_plus(event["Records"][0]["s3"]["object"]["key"], encoding="utf-8")
 
     try:

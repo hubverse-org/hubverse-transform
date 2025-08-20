@@ -110,3 +110,92 @@ def test_parquet_file(tmpdir, test_csv_file) -> str:
         pq.write_table(model_output_table, test_parquet_file)
 
     return str(test_file_path)
+
+
+#
+# schema-related fixtures that patch schema-related functions to override a pa.schema
+#
+
+@pytest.fixture()
+def schema_empty(mocker):
+    schema = pa.schema([])
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._read_tasks", return_value={'a': 'dict'})
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._get_schema", return_value=schema)
+
+
+@pytest.fixture()
+def schema_reference_date(mocker):
+    schema = pa.schema([('reference_date', pa.date32()),
+                        ('target', pa.string()),
+                        ('horizon', pa.int64()),
+                        ('target_end_date', pa.date32()),
+                        ('location', pa.string()),
+                        ('output_type', pa.string()),
+                        ('output_type_id', pa.string()),
+                        ('value', pa.float64()),
+                        ('round_id', pa.string()),
+                        ('model_id', pa.string())])
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._read_tasks", return_value={'a': 'dict'})
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._get_schema", return_value=schema)
+
+
+@pytest.fixture()
+def schema_origin_date(mocker):
+    schema = pa.schema([('origin_date', pa.date32()),
+                        ('target', pa.string()),
+                        ('horizon', pa.int64()),
+                        ('location', pa.string()),
+                        ('output_type', pa.string()),
+                        ('output_type_id', pa.string()),
+                        ('value', pa.float64()),
+                        ('round_id', pa.date32()),
+                        ('model_id', pa.string())])
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._read_tasks", return_value={'a': 'dict'})
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._get_schema", return_value=schema)
+
+
+@pytest.fixture()
+def schema_origin_date_str_val(mocker):
+    schema = pa.schema([('origin_date', pa.date32()),
+                        ('target', pa.string()),
+                        ('horizon', pa.int64()),
+                        ('location', pa.string()),
+                        ('output_type', pa.string()),
+                        ('output_type_id', pa.string()),
+                        ('value', pa.string()),  # only diff b/w this and schema_origin_date()
+                        ('round_id', pa.date32()),
+                        ('model_id', pa.string())])
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._read_tasks", return_value={'a': 'dict'})
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._get_schema", return_value=schema)
+
+
+@pytest.fixture()
+def schema_origin_date_no_model_round_ids(mocker):
+    schema = pa.schema([('origin_date', pa.date32()),
+                        ('target', pa.string()),
+                        ('horizon', pa.int64()),
+                        ('location', pa.string()),
+                        ('output_type', pa.string()),
+                        ('output_type_id', pa.string()),
+                        ('value', pa.float64()),
+                        # ('round_id', pa.date32()),  # diff b/w this and schema_origin_date()
+                        # ('model_id', pa.string()),  # ""
+                        ])
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._read_tasks", return_value={'a': 'dict'})
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._get_schema", return_value=schema)
+
+
+@pytest.fixture()
+def schema_origin_date_no_model_round_ids_loc(mocker):
+    schema = pa.schema([('origin_date', pa.date32()),
+                        ('target', pa.string()),
+                        ('horizon', pa.int64()),
+                        # ('location', pa.string()),  # diff b/w this and schema_origin_date()
+                        ('output_type', pa.string()),
+                        ('output_type_id', pa.string()),
+                        ('value', pa.float64()),
+                        # ('round_id', pa.date32()),  # ""
+                        # ('model_id', pa.string()),  # ""
+                        ])
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._read_tasks", return_value={'a': 'dict'})
+    mocker.patch("hubverse_transform.model_output.ModelOutputHandler._get_schema", return_value=schema)
